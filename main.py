@@ -3,10 +3,11 @@ import logging
 import coloredlogs
 
 from Coach import Coach
-from othello.OthelloGame import OthelloGame as Game
-from othello.pytorch.NNet import NNetWrapper as nn
-from utils import *
+from connect4.Connect4Game import Connect4Game
+from connect4.pytorch.NNet import NNetWrapper as nn
+from utils import dotdict
 
+Game = Connect4Game
 log = logging.getLogger(__name__)
 
 coloredlogs.install(level='INFO')  # Change this to DEBUG to see more info.
@@ -31,7 +32,7 @@ args = dotdict({
 
 def main():
     log.info('Loading %s...', Game.__name__)
-    g = Game(6)
+    g = Connect4Game()
 
     log.info('Loading %s...', nn.__name__)
     nnet = nn(g)

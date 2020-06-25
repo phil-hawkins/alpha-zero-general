@@ -1,0 +1,8 @@
+[
+  "connect4/test_connect4.py::test_simple_moves",
+  "connect4/test_connect4.py::test_overfull_column",
+  "connect4/test_connect4.py::test_get_valid_moves",
+  "connect4/test_connect4.py::test_symmetries",
+  "connect4/test_connect4.py::test_game_ended",
+  "connect4/test_connect4.py::test_immutable_move"
+]

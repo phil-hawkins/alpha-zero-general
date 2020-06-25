@@ -1,8 +1,9 @@
 import Arena
 from MCTS import MCTS
-from othello.OthelloGame import OthelloGame
-from othello.OthelloPlayers import *
-from othello.pytorch.NNet import NNetWrapper as NNet
+from connect4.Connect4Game import Connect4Game
+from connect4.tensorflow.NNet import NNetWrapper as nn
+from connect4.Connect4Players import RandomPlayer, HumanConnect4Player, OneStepLookaheadConnect4Player
+from utils import dotdict
 
 
 import numpy as np
@@ -13,17 +14,13 @@ use this script to play any two agents against each other, or play manually with
 any agent.
 """
 
-mini_othello = False  # Play in 6x6 instead of the normal 8x8.
 human_vs_cpu = True
 
-if mini_othello:
-    g = OthelloGame(6)
-else:
-    g = OthelloGame(8)
+g = Connect4Game()
 
 # all players
 rp = RandomPlayer(g).play
-gp = GreedyOthelloPlayer(g).play
+oslp = OneStepLookaheadConnect4Player(g).play
 hp = HumanOthelloPlayer(g).play
 
 
@@ -49,6 +46,6 @@ else:
 
     player2 = n2p  # Player 2 is neural network if it's cpu vs cpu.
 
-arena = Arena.Arena(n1p, player2, g, display=OthelloGame.display)
+arena = Arena.Arena(n1p, player2, g, display=Connect4Game.display)
 
 print(arena.playGames(2, verbose=True))
