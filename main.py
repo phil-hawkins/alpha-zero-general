@@ -1,5 +1,6 @@
 import logging
-
+from absl import app, flags
+from absl.flags import FLAGS
 import coloredlogs
 
 from Coach import Coach
@@ -7,30 +8,37 @@ from connect4.Connect4Game import Connect4Game
 from connect4.pytorch.NNet import NNetWrapper as nn
 from utils import dotdict
 
+flags.DEFINE_integer('numIters', 1000, 'Number of training iterations to run')
+flags.DEFINE_integer('numEps', 100, 'Number of complete self-play games to simulate during a new iteration')
+flags.DEFINE_integer('tempThreshold', 15, '?')
+flags.DEFINE_float('updateThreshold', 0.6, 'During arena playoff, new neural net will be accepted if threshold or more of games are won')
+flags.DEFINE_integer('maxlenOfQueue', 200000, 'Number of game examples to train the neural networks')
+flags.DEFINE_integer('numMCTSSims', 25, 'Number of games moves for MCTS to simulate')
+flags.DEFINE_integer('arenaCompare', 40, 'Number of games to play during arena play to determine if new net will be accepted')
+flags.DEFINE_integer('cpuct', 1, '?')
+
 Game = Connect4Game
 log = logging.getLogger(__name__)
-
 coloredlogs.install(level='INFO')  # Change this to DEBUG to see more info.
 
-args = dotdict({
-    'numIters': 1000,
-    'numEps': 100,              # Number of complete self-play games to simulate during a new iteration.
-    'tempThreshold': 15,        #
-    'updateThreshold': 0.6,     # During arena playoff, new neural net will be accepted if threshold or more of games are won.
-    'maxlenOfQueue': 200000,    # Number of game examples to train the neural networks.
-    'numMCTSSims': 25,          # Number of games moves for MCTS to simulate.
-    'arenaCompare': 40,         # Number of games to play during arena play to determine if new net will be accepted.
-    'cpuct': 1,
+def main(_argv):
+    args = dotdict({
+        'numIters': FLAGS.numIters,
+        'numEps': FLAGS.numEps,             
+        'tempThreshold': FLAGS.tempThreshold,
+        'updateThreshold': FLAGS.updateThreshold,
+        'maxlenOfQueue': FLAGS.maxlenOfQueue,
+        'numMCTSSims': FLAGS.numMCTSSims,
+        'arenaCompare': FLAGS.arenaCompare,
+        'cpuct': FLAGS.cpuct,
 
-    'checkpoint': './temp/',
-    'load_model': False,
-    'load_folder_file': ('/dev/models/8x100x50','best.pth.tar'),
-    'numItersForTrainExamplesHistory': 20,
+        'checkpoint': './temp/',
+        'load_model': False,
+        'load_folder_file': ('/dev/models/8x100x50','best.pth.tar'),
+        'numItersForTrainExamplesHistory': 20,
 
-})
+    })    
 
-
-def main():
     log.info('Loading %s...', Game.__name__)
     g = Connect4Game()
 
@@ -54,5 +62,5 @@ def main():
     c.learn()
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    app.run(main)
