@@ -52,7 +52,7 @@ class OpenC4NNet(nn.Module):
         s = s.mean(dim=2).permute(0, 2, 1).view(-1, 1024)                                               # (batch_size x board_y) x 1024
         s = F.dropout(F.relu(self.fc_bn1(self.fc1(s))), p=self.args.dropout, training=self.training)    # (batch_size x board_y) x 512
 
-        pi = self.fc2(s).view(-1, self.action_size)                                                     # batch_size x action_size
-        v = self.fc3(s).view(-1, self.action_size).mean(dim=1, keepdim=True)                            # batch_size x 1
+        pi = self.fc2(s).reshape(-1, self.action_size)                                                     # batch_size x action_size
+        v = self.fc3(s).reshape(-1, self.action_size).mean(dim=1, keepdim=True)                            # batch_size x 1
 
         return F.log_softmax(pi, dim=1), torch.tanh(v)
