@@ -49,7 +49,7 @@ class OpenC4NNet(nn.Module):
         #s = s.view(-1, self.args.num_channels*(self.board_x-4)*(self.board_y-4))
 
         s = F.dropout(F.relu(self.bn5(self.conv5(s))), p=self.args.dropout, training=self.training)     # batch_size x 1024 x board_x x board_y
-        s = s.mean(dim=2).permute(0, 2, 1).view(-1, 1024)                                               # (batch_size x board_y) x 1024
+        s = s.mean(dim=2).permute(0, 2, 1).reshape(-1, 1024)                                               # (batch_size x board_y) x 1024
         s = F.dropout(F.relu(self.fc_bn1(self.fc1(s))), p=self.args.dropout, training=self.training)    # (batch_size x board_y) x 512
 
         pi = self.fc2(s).reshape(-1, self.action_size)                                                     # batch_size x action_size
