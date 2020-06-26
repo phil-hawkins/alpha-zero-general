@@ -22,9 +22,12 @@ flags.DEFINE_boolean('verbose', False, 'show playout')
 flags.DEFINE_integer('num_games', 2, 'Number of games to play')
 flags.DEFINE_string('cpu1_checkpoint', 'best.pth.tar', 'pretrained weights for computer player 1')
 flags.DEFINE_string('cpu2_checkpoint', 'best.pth.tar', 'pretrained weights for computer player 2')
+flags.DEFINE_integer('game_board_height', None, 'overide default height')
+flags.DEFINE_integer('game_board_width', None, 'overide default width')
+flags.DEFINE_integer('game_win_length', None, 'overide default win_length')
 
 def main(_argv):
-    g = Connect4Game()
+    g = Connect4Game(FLAGS.game_board_height, FLAGS.game_board_width, FLAGS.game_win_length)
 
     # all players
     rp = RandomPlayer(g).play

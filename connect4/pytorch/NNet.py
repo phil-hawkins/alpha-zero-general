@@ -12,7 +12,8 @@ from NeuralNet import NeuralNet
 import torch
 import torch.optim as optim
 
-from .Connect4NNet import Connect4NNet as c4nnet
+#from .Connect4NNet import Connect4NNet as c4nnet
+from .OpenC4NNet import OpenC4NNet as c4nnet
 
 args = dotdict({
     'lr': 0.001,
