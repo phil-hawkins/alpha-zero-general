@@ -6,7 +6,7 @@ from Game import Game
 from .HexLogic import Board
 
 
-class Connect4Game(Game):
+class HexGame(Game):
     """
     Connect4 Game class implementing the alpha-zero-general Game interface.
     """
@@ -26,7 +26,9 @@ class Connect4Game(Game):
 
     def getNextState(self, board, player, action):
         """Returns a copy of the board with updated move, original board is unmodified."""
+
         b = self._base_board.with_np_pieces(np_pieces=np.copy(board))
+        action = self.getCanonicalAction(action, player)
         b.add_stone(action, player)
         return b.np_pieces, -player
 
@@ -48,9 +50,18 @@ class Connect4Game(Game):
             # 0 used to represent unfinished game.
             return 0
 
+    def getCanonicalAction(self, action, player):
+        if player == -1:
+            r, c = divmod(action, self._base_board.height)
+            action = (c * self._base_board.width) + r
+        return action
+
     def getCanonicalForm(self, board, player):
-        # Flip player from 1 to -1
-        return np.transpose(board * player)
+        if player == -1:
+            # Flip player from 1 to -1
+            return np.transpose(board * player)
+        else:
+            return board
 
     def getSymmetries(self, board, pi):
         """Board is left/right board symmetric"""

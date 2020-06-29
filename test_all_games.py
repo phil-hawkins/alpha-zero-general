@@ -13,7 +13,7 @@
     - Connect4                  [Yes]
     - Gobang                    [Yes]       [Yes]
 
-"""
+
 
 import unittest
 
@@ -83,3 +83,5 @@ class TestAllGames(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+    """

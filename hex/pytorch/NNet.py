@@ -13,7 +13,7 @@ import torch
 import torch.optim as optim
 
 #from .Connect4NNet import Connect4NNet as c4nnet
-from .OpenC4NNet import OpenC4NNet as c4nnet
+from .baseline_cnn import CNNHex as hexnet
 
 args = dotdict({
     'lr': 0.001,
@@ -21,13 +21,16 @@ args = dotdict({
     'epochs': 10,
     'batch_size': 64,
     'cuda': torch.cuda.is_available(),
-    'num_channels': 512,
+    'num_channels': 128,
+    'receptive_range' : 7,
+    'board_size' : 7,
+    'in_channels' : 3                   # 0/1/2 - black/white/empty
 })
 
 
 class NNetWrapper(NeuralNet):
     def __init__(self, game):
-        self.nnet = c4nnet(game, args)
+        self.nnet = hexnet(game, args)
         self.board_x, self.board_y = game.getBoardSize()
         self.action_size = game.getActionSize()
 
