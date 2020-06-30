@@ -64,8 +64,10 @@ class HexGame(Game):
             return board
 
     def getSymmetries(self, board, pi):
-        """Board is left/right board symmetric"""
-        return [(board, pi), (board[:, ::-1], pi[::-1])]
+        """Board is not symmetrical.  
+        Technically it is symetrical with transposition but the cannonical 
+        structure assumes the active player is connecting left to right"""
+        return [(board, pi)]
 
     def stringRepresentation(self, board):
         return board.tostring()
