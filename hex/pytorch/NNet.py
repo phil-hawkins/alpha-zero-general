@@ -13,7 +13,7 @@ import torch
 import torch.optim as optim
 
 #from .Connect4NNet import Connect4NNet as c4nnet
-from .baseline_cnn import CNNHex as hexnet
+from .simple_scale_cnn import CNNHex as hexnet
 
 args = dotdict({
     'lr': 0.001,
@@ -30,7 +30,7 @@ args = dotdict({
 
 class NNetWrapper(NeuralNet):
     def __init__(self, game):
-        self.nnet = hexnet(game, args)
+        self.nnet = hexnet.base_cnn(game, args)
         self.board_x, self.board_y = game.getBoardSize()
         self.action_size = game.getActionSize()
 
