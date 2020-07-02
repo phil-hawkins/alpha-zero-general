@@ -19,6 +19,7 @@ flags.DEFINE_integer('cpuct', 1, 'constant multiplier for predictor + upper conf
 flags.DEFINE_integer('game_board_height', None, 'overide default height')
 flags.DEFINE_integer('game_board_width', None, 'overide default width')
 
+
 log = logging.getLogger(__name__)
 coloredlogs.install(level='INFO')  # Change this to DEBUG to see more info.
 
