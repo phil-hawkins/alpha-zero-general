@@ -10,7 +10,7 @@ class Arena():
     An Arena class where any 2 agents can be pit against each other.
     """
 
-    def __init__(self, player1, player2, game, display=None):
+    def __init__(self, player1, player2, game, display=None, display_move=None):
         """
         Input:
             player 1,2: two functions that takes board as input, return action
@@ -26,6 +26,7 @@ class Arena():
         self.player2 = player2
         self.game = game
         self.display = display
+        self.display_move = display_move
 
     def playGame(self, verbose=False):
         """
@@ -55,6 +56,8 @@ class Arena():
                 log.error(f'Action {action} is not valid!')
                 log.debug(f'valids = {valids}')
                 assert valids[action] > 0
+            if verbose and self.display_move is not None:
+                self.display_move(action, curPlayer)
             board, curPlayer = self.game.getNextState(board, curPlayer, action)
         if verbose:
             assert self.display

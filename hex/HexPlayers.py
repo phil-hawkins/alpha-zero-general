@@ -19,7 +19,7 @@ class HumanHexPlayer():
 
     def play(self, board):
         valid_moves = self.game.getValidMoves(board, 1)
-        print('\nMoves (RC):')
+        print('\nMoves (RC) for 1 (CR) for -1:')
 
         while True:
             move_row = int(input())

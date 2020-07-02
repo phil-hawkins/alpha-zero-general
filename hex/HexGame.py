@@ -14,6 +14,7 @@ class HexGame(Game):
     def __init__(self, height=None, width=None, np_pieces=None):
         Game.__init__(self)
         self._base_board = Board(height, width, np_pieces)
+        self.next_player = 1
 
     def getInitBoard(self):
         return self._base_board.np_pieces
@@ -30,7 +31,8 @@ class HexGame(Game):
         b = self._base_board.with_np_pieces(np_pieces=np.copy(board))
         action = self.getCanonicalAction(action, player)
         b.add_stone(action, player)
-        return b.np_pieces, -player
+        self.next_player = -player
+        return b.np_pieces, self.next_player
 
     def getValidMoves(self, board, player):
         """Any empty cell is a valid move"""
@@ -64,10 +66,8 @@ class HexGame(Game):
             return board
 
     def getSymmetries(self, board, pi):
-        """Board is not symmetrical.  
-        Technically it is symetrical with transposition but the cannonical 
-        structure assumes the active player is connecting left to right"""
-        return [(board, pi)]
+        """Board is symmetrical under 180 degree rotation"""
+        return [(board, pi), (np.rot90(board, 2), pi[::-1])]
 
     def stringRepresentation(self, board):
         return board.tostring()
@@ -75,6 +75,11 @@ class HexGame(Game):
     @staticmethod
     def display(board):
         print(" -----------------------")
-        print(' '.join(map(str, range(len(board[0])))))
-        print(board)
+        #print(' '.join(map(str, range(len(board[0])))))
+        print(Board.np_display_string(board))
         print(" -----------------------")
+
+    def display_move(self, action, player):
+        action = self.getCanonicalAction(action, player)
+        r, c = divmod(action, self._base_board.width)
+        print("player {} placed stone at {},{}".format(player, r, c))

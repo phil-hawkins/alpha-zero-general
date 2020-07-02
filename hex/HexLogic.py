@@ -65,6 +65,9 @@ class Board():
         return n
 
     def get_win_state(self):
+        """ checks whether player -1 has made a left-right connection or 
+        player -1 has made a top-bottom connection by first transposing the board
+        """
         def check_left_right_connect(board_state, player):
             # add a row of active player stones to the left side
             board_state = np.concatenate((
@@ -108,10 +111,9 @@ class Board():
         return Board(self.height, self.width, np_pieces)
 
     @classmethod
-    def show_board(cls, np_pieces):
+    def np_display_string(cls, np_pieces):
         b = Board(np_pieces.shape[0], np_pieces.shape[1], np_pieces)
         ds = b.display_string
-        print(ds)
 
         return ds
 
