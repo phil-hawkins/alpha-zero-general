@@ -17,12 +17,12 @@ from utils import dotdict
 
 
 class ResBlock(torch.nn.Module):
-    def __init__(self, channels=32):
+    def __init__(self, channels=32, affine_bn=True):
         super(ResBlock, self).__init__()
         self.cnn_1 = Conv2d(in_channels=channels, out_channels=channels, kernel_size=3, padding=1)
-        self.bn_1 = BatchNorm2d(num_features=channels)
+        self.bn_1 = BatchNorm2d(num_features=channels, affine=affine_bn)
         self.cnn_2 = Conv2d(in_channels=channels, out_channels=channels, kernel_size=3, padding=1)
-        self.bn_2 = BatchNorm2d(num_features=channels)
+        self.bn_2 = BatchNorm2d(num_features=channels, affine=affine_bn)
 
     def forward(self, x):
         residual = x
@@ -58,7 +58,7 @@ class ScaleFreeValueHead(torch.nn.Module):
         ]))
 
     def forward(self, x):
-        x = self.v_head(x).mean()
+        x = self.v_head(x).mean(dim=1)
         
         return x
 
@@ -121,3 +121,34 @@ class CNNHex(Module):
             
         return p, v
 
+class RecurrentCNNHex(CNNHex):
+
+    def __init__(self, game, args, v_head):
+    #def __init__(self, layers=8, filters=128, in_channels=5, size=13, position_bias=True):
+        ''' reimplementation of the MoHex-CNN model from https://webdocs.cs.ualberta.ca/~hayward/papers/movepredhex.pdf 
+
+        this model only uses stone position features (planes 0/1/2) and not the engineered bridge or "to play" features
+
+        the position bias step has been removed
+        '''
+
+        super(RecurrentCNNHex, self).__init__(game, args, v_head)
+        self.msg_passing = ResBlock(channels=args.num_channels, affine_bn=False)
+
+    @classmethod
+    def recurrent_cnn(cls, game, args):
+        return cls(game, args, ScaleFreeValueHead(in_channels=args.num_channels))
+
+    def forward(self, x):
+        x = multiplane(x)
+        assert(x.size(1) == self.in_channels)
+        board_size = x.size(2)
+
+        x = self.trunk(x)
+        for _ in range(board_size):
+            x = self.msg_passing(x)
+
+        p = self.p_head(x)
+        v = self.v_head(x)
+            
+        return p, v

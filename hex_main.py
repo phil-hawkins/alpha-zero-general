@@ -18,6 +18,12 @@ flags.DEFINE_integer('arenaCompare', 40, 'Number of games to play during arena p
 flags.DEFINE_integer('cpuct', 1, 'constant multiplier for predictor + upper confidence (bouund/threshold?) function (modified from PUCB in http://gauss.ececs.uc.edu/Conferences/isaim2010/papers/rosin.pdf)')
 flags.DEFINE_integer('game_board_height', None, 'overide default height')
 flags.DEFINE_integer('game_board_width', None, 'overide default width')
+flags.DEFINE_string('nnet', 'base_cnn', 'neural net for p,v estimation')
+flags.DEFINE_string('save_prefix', 'base_cnn_', 'prefix for best model save file')
+
+flags.DEFINE_boolean('load_model', False, 'load model from checkpoint')
+flags.DEFINE_string('load_folder', 'temp', 'load model from folder')
+flags.DEFINE_string('load_file', 'best.pth.tar', 'load model from file')
 
 
 log = logging.getLogger(__name__)
@@ -35,8 +41,9 @@ def main(_argv):
         'cpuct': FLAGS.cpuct,
 
         'checkpoint': './temp/',
-        'load_model': False,
-        'load_folder_file': ('/dev/models/8x100x50','best.pth.tar'),
+        'save_prefix' : FLAGS.save_prefix,
+        'load_model': FLAGS.load_model,
+        'load_folder_file': (FLAGS.load_folder, FLAGS.load_file),
         'numItersForTrainExamplesHistory': 20,
 
     })    
@@ -45,7 +52,7 @@ def main(_argv):
     g = HexGame(height=FLAGS.game_board_height, width=FLAGS.game_board_width)
 
     log.info('Loading %s...', nn.__name__)
-    nnet = nn(g)
+    nnet = nn(g, nnet=FLAGS.nnet)
 
     if args.load_model:
         log.info('Loading checkpoint "%s/%s"...', args.load_folder_file)

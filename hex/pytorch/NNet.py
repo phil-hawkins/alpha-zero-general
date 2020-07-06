@@ -13,7 +13,7 @@ import torch
 import torch.optim as optim
 
 #from .Connect4NNet import Connect4NNet as c4nnet
-from .simple_scale_cnn import CNNHex as hexnet
+from .scale_cnn import CNNHex, RecurrentCNNHex
 
 args = dotdict({
     'lr': 0.001,
@@ -21,7 +21,7 @@ args = dotdict({
     'epochs': 10,
     'batch_size': 64,
     'cuda': torch.cuda.is_available(),
-    'num_channels': 128,
+    'num_channels': 32,
     'res_blocks' : 5,
     'board_size' : 7,
     'in_channels' : 3                   # 0/1/2 - black/white/empty
@@ -29,8 +29,17 @@ args = dotdict({
 
 
 class NNetWrapper(NeuralNet):
-    def __init__(self, game):
-        self.nnet = hexnet.base_cnn(game, args)
+    def __init__(self, game, nnet="base_cnn"):
+        if nnet == "base_cnn":
+            self.nnet = CNNHex.base_cnn(game, args)
+        elif nnet == "scalefree_base_cnn":
+            self.nnet = CNNHex.base_cnn(game, args)
+        elif nnet == "recurrent_cnn":
+            args.res_blocks = 2
+            self.nnet = RecurrentCNNHex.recurrent_cnn(game, args)
+        else:
+            assert False, "Unknown network {}".format(nnet)
+
         self.board_x, self.board_y = game.getBoardSize()
         self.action_size = game.getActionSize()
 
@@ -94,7 +103,7 @@ class NNetWrapper(NeuralNet):
         with torch.no_grad():
             pi, v = self.nnet(board)
 
-        # print('PREDICTION TIME TAKEN : {0:03f}'.format(time.time()-start))
+        #print('PREDICTION TIME TAKEN : {0:03f}'.format(time.time()-start))
         return torch.exp(pi).data.cpu().numpy()[0], v.data.cpu().numpy()[0]
 
     def loss_pi(self, targets, outputs):
