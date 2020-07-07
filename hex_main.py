@@ -20,6 +20,7 @@ flags.DEFINE_integer('game_board_height', None, 'overide default height')
 flags.DEFINE_integer('game_board_width', None, 'overide default width')
 flags.DEFINE_string('nnet', 'base_cnn', 'neural net for p,v estimation')
 flags.DEFINE_string('save_prefix', 'base_cnn_', 'prefix for best model save file')
+flags.DEFINE_integer('numItersForTrainExamplesHistory', 20, 'Number of training iterations to keep examples for')
 
 flags.DEFINE_boolean('load_model', False, 'load model from checkpoint')
 flags.DEFINE_string('load_folder', 'temp', 'load model from folder')
@@ -44,8 +45,7 @@ def main(_argv):
         'save_prefix' : FLAGS.save_prefix,
         'load_model': FLAGS.load_model,
         'load_folder_file': (FLAGS.load_folder, FLAGS.load_file),
-        'numItersForTrainExamplesHistory': 20,
-
+        'numItersForTrainExamplesHistory': FLAGS.numItersForTrainExamplesHistory
     })    
 
     log.info('Loading %s...', HexGame.__name__)
