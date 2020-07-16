@@ -20,8 +20,8 @@ any agent.
 flags.DEFINE_boolean('human_vs_cpu', False, 'play interactivly with a human')
 flags.DEFINE_boolean('verbose', False, 'show playout')
 flags.DEFINE_integer('num_games', 2, 'Number of games to play')
-flags.DEFINE_string('cpu1_checkpoint', 'base_cnn/base_cnn_best.pth.tar', 'pretrained weights for computer player 1')
-flags.DEFINE_string('cpu2_checkpoint', 'base_cnn/base_cnn_best.pth.tar', 'pretrained weights for computer player 2')
+flags.DEFINE_string('cpu1_checkpoint', 'base_cnn/base_cnn_best_e50.pth.tar', 'pretrained weights for computer player 1')
+flags.DEFINE_string('cpu2_checkpoint', 'base_cnn/base_cnn_best_e50.pth.tar', 'pretrained weights for computer player 2')
 flags.DEFINE_integer('game_board_height', 7, 'overide default height')
 flags.DEFINE_integer('game_board_width', 7, 'overide default width')
 

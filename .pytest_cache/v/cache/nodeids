@@ -5,6 +5,8 @@
   "connect4/test_connect4.py::test_symmetries",
   "connect4/test_connect4.py::test_game_ended",
   "connect4/test_connect4.py::test_immutable_move",
+  "tests/graph_net_test.py::Test_GraphNet::test_model",
+  "tests/graph_net_test.py::Test_GraphNet::test_position_encoding",
   "tests/hex_test.py::Test_Hex::test_board",
   "tests/hex_test.py::Test_Hex::test_winstate"
 ]

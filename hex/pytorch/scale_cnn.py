@@ -58,7 +58,7 @@ class ScaleFreeValueHead(torch.nn.Module):
         ]))
 
     def forward(self, x):
-        x = self.v_head(x).mean(dim=1)
+        x = self.v_head(x).mean(dim=1).tanh()
         
         return x
 
