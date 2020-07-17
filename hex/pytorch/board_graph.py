@@ -63,7 +63,7 @@ class BoardGraph():
         k = torch.tensor([
             [-1, -1,  0,  1,  1,  0],
             [ 0,  1,  1,  0, -1, -1]]
-        ).unsqueeze(dim=1).expand(2, board.cell_count, 6).reshape(2,-1)
+        , device=device).unsqueeze(dim=1).expand(2, board.cell_count, 6).reshape(2,-1)
         c = torch.ones((board.size, board.size), device=device).to_sparse().indices()
         c = c.unsqueeze(dim=2).expand(2, board.cell_count, 6).reshape(2,-1)
         edge_index = torch.cat([c, c + k], dim=0)
