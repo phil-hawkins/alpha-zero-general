@@ -18,8 +18,8 @@ flags.DEFINE_integer('arenaCompare', 40, 'Number of games to play during arena p
 flags.DEFINE_integer('cpuct', 1, 'constant multiplier for predictor + upper confidence (bouund/threshold?) function (modified from PUCB in http://gauss.ececs.uc.edu/Conferences/isaim2010/papers/rosin.pdf)')
 flags.DEFINE_integer('game_board_height', None, 'overide default height')
 flags.DEFINE_integer('game_board_width', None, 'overide default width')
-flags.DEFINE_string('nnet', 'base_cnn', 'neural net for p,v estimation')
-flags.DEFINE_string('save_prefix', 'base_cnn_', 'prefix for best model save file')
+flags.DEFINE_string('nnet', 'base_gat', 'neural net for p,v estimation')
+flags.DEFINE_string('save_prefix', 'base_gat_', 'prefix for best model save file')
 flags.DEFINE_integer('numItersForTrainExamplesHistory', 20, 'Number of training iterations to keep examples for')
 
 flags.DEFINE_boolean('load_model', False, 'load model from checkpoint')

@@ -1,5 +1,21 @@
 {
     "python.pythonPath": "C:\\Users\\phila\\Anaconda3\\envs\\pytorch_mcts\\python.exe",
     "python.linting.pylintEnabled": true,
-    "python.linting.enabled": true
+    "python.linting.enabled": true,
+    "python.testing.unittestArgs": [
+        "-v",
+        "-s",
+        "./tests",
+        "-p",
+        "*_test.py"
+    ],
+    "python.testing.pytestEnabled": true,
+    "python.testing.nosetestsEnabled": false,
+    "python.testing.unittestEnabled": false,
+    "python.testing.nosetestArgs": [
+        "tests"
+    ],
+    "python.testing.pytestArgs": [
+        "tests"
+    ]
 }

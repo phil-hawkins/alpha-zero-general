@@ -14,6 +14,7 @@ import torch.optim as optim
 
 #from .Connect4NNet import Connect4NNet as c4nnet
 from .scale_cnn import CNNHex, RecurrentCNNHex
+from .graph_net import GraphNet
 
 args = dotdict({
     'lr': 0.001,
@@ -37,6 +38,14 @@ class NNetWrapper(NeuralNet):
         elif nnet == "recurrent_cnn":
             args.res_blocks = 2
             self.nnet = RecurrentCNNHex.recurrent_cnn(game, args)
+        elif nnet == "base_gat":        
+            args.batch_size = 16
+            args.num_channels = 32
+            args.expand_base = 2
+            args.attn_heads = 1
+            args.pos_encoding_sz = 28
+            args.readout_attn_heads = 4
+            self.nnet = GraphNet(args)
         else:
             assert False, "Unknown network {}".format(nnet)
 

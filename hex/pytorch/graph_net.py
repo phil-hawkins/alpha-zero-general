@@ -137,7 +137,7 @@ class GraphNet(nn.Module):
                 edge_index : coo index for super-graph adjacency matrix (2=from/to, edges)
                     this is a union of all graphs in the batch
                 node_attr : node embedding as column vectors (node, attributes)
-                batch: 
+                batch: (nodes, features (0-2 below))
                     0 : mapping from nodes to input graphs, as per torch geo batch
                     1 : mask for nodes which are valid actions i.e. empty cells
                     2 : map from node index to action index in original input
@@ -149,6 +149,7 @@ class GraphNet(nn.Module):
         batch = [[], []]
         for bi, board in enumerate(x):
             bg = BoardGraph.graph_from_board(Board(board))
+            bg.merge_groups()
             for i, player in enumerate([-1, 1]):
                 player_graph[i] = PlayerGraph.from_board_graph(bg, player)
                 edge_index[i].append(player_graph[i].edge_index + node_ndx_start[i])
