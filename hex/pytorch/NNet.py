@@ -30,15 +30,16 @@ args = dotdict({
 
 
 class NNetWrapper(NeuralNet):
-    def __init__(self, game, nnet="base_cnn"):
-        if nnet == "base_cnn":
+    def __init__(self, game, net_type="base_gat"):
+        self.net_type = net_type
+        if self.net_type == "base_cnn":
             self.nnet = CNNHex.base_cnn(game, args)
-        elif nnet == "scalefree_base_cnn":
+        elif self.net_type == "scalefree_base_cnn":
             self.nnet = CNNHex.base_cnn(game, args)
-        elif nnet == "recurrent_cnn":
+        elif self.net_type == "recurrent_cnn":
             args.res_blocks = 2
             self.nnet = RecurrentCNNHex.recurrent_cnn(game, args)
-        elif nnet == "base_gat":        
+        elif self.net_type == "base_gat":        
             args.batch_size = 16
             args.num_channels = 32
             args.expand_base = 2
