@@ -47,6 +47,7 @@ class BoardGraph():
         self.node_attr = node_attr
         self.edge_index = edge_index
         self.action_map = action_map
+        self.device = node_attr.device
 
     def __str__(self):
         return "Node Attributes:\n{}\n\nAdjacency Matrix:\n{}\n\nBoard Map: {}\n".format(self.node_attr, self.adjacency_matrix.to_dense(), self.action_map)
@@ -63,7 +64,7 @@ class BoardGraph():
             [-1, -1,  0,  1,  1,  0],
             [ 0,  1,  1,  0, -1, -1]]
         ).unsqueeze(dim=1).expand(2, board.cell_count, 6).reshape(2,-1)
-        c = torch.ones((board.size, board.size)).to_sparse().indices()
+        c = torch.ones((board.size, board.size), device=device).to_sparse().indices()
         c = c.unsqueeze(dim=2).expand(2, board.cell_count, 6).reshape(2,-1)
         edge_index = torch.cat([c, c + k], dim=0)
 
@@ -112,7 +113,7 @@ class BoardGraph():
     @property
     def adjacency_matrix(self):
         v = torch.ones_like(self.edge_index[0])
-        return torch.sparse.LongTensor(self.edge_index, v)
+        return torch.sparse_coo_tensor(indices=self.edge_index, values=v, dtype=torch.long, device=self.edge_index.device)
 
     def merge_nodes(self, nodes_ndx):
         assert len(nodes_ndx) > 0 
@@ -122,8 +123,8 @@ class BoardGraph():
         new_node_ndx = dadj.size(0)
         new_edge_row_mask = dadj[nodes_ndx, :].max(dim=0)[0].bool()
         new_edge_col_mask = dadj[:, nodes_ndx].max(dim=1)[0].bool()
-        new_edge_row = torch.arange(len(new_edge_row_mask))[new_edge_row_mask]
-        new_edge_col = torch.arange(len(new_edge_col_mask))[new_edge_col_mask]
+        new_edge_row = torch.arange(len(new_edge_row_mask), device=self.device)[new_edge_row_mask]
+        new_edge_col = torch.arange(len(new_edge_col_mask), device=self.device)[new_edge_col_mask]
         new_node_row_ndx = torch.full_like(new_edge_row, fill_value=new_node_ndx)
         new_node_col_ndx = torch.full_like(new_edge_col, fill_value=new_node_ndx)
 
@@ -140,7 +141,7 @@ class BoardGraph():
             # remove orphaned edges
             dadj = self.adjacency_matrix.to_dense()
             new_size = dadj.size(0) - len(nodes_ndx)
-            mask = torch.ones(dadj.size()).bool()
+            mask = torch.ones(dadj.size(), device=self.device).bool()
             mask[nodes_ndx, :] = False
             mask[:, nodes_ndx] = False
             adj = dadj[mask].view(new_size, new_size).to_sparse()
@@ -183,7 +184,7 @@ class BoardGraph():
 
         #adj = self.adjacency_matrix
         stone_mask = self.node_attr[:, 0] != 0
-        untraversed = set(np.arange(len(stone_mask))[stone_mask].tolist())
+        untraversed = set(np.arange(len(stone_mask), device=self.device)[stone_mask].tolist())
         old_node_ndxs = []
         
         while len(untraversed) > 0:
@@ -223,12 +224,12 @@ class PlayerGraph(BoardGraph):
     def get_node_attr(self, size, position_encoder=None, add_one_hot_node_id=False):
         a = self.node_attr.float()
         if add_one_hot_node_id:
-            node_id = torch.eye(a.size(0))
+            node_id = torch.eye(a.size(0), device=self.device)
             a = torch.cat([a, node_id], dim=1)
         if position_encoder is not None:
             # generate identifiers for the nodes based on a shuffled range of integers
             # this breaks up meaningless patterns in sequential node identifiers
-            pos = position_encoder(torch.randperm(a.size(0)))
+            pos = position_encoder(torch.randperm(a.size(0), device=self.device))
             a = torch.cat([a, pos], dim=1)
 
         assert a.size(1) <= size, "node attributes too large"
