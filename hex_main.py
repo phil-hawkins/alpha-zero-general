@@ -52,7 +52,7 @@ def main(_argv):
     g = HexGame(height=FLAGS.game_board_height, width=FLAGS.game_board_width)
 
     log.info('Loading %s...', nn.__name__)
-    nnet = nn(g, nnet=FLAGS.nnet)
+    nnet = nn(g, net_type=FLAGS.nnet)
 
     if args.load_model:
         log.info('Loading checkpoint "%s/%s"...', args.load_folder_file)
