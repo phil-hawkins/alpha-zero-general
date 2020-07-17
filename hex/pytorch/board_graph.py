@@ -183,7 +183,7 @@ class BoardGraph():
             return done
 
         #adj = self.adjacency_matrix
-        stone_mask = self.node_attr[:, 0] != 0
+        stone_mask = (self.node_attr[:, 0] != 0).cpu()
         untraversed = set(np.arange(len(stone_mask))[stone_mask].tolist())
         old_node_ndxs = []
         
