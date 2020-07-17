@@ -96,20 +96,19 @@ class Trunk(nn.Module):
     def __init__(self, node_size_in, h1_sz, h2_sz, attn_heads, res_blocks):
         super().__init__()
         
-        self.trunk_odict = [
-            ('trunk gc 0', GATConv(in_channels=node_size_in, out_channels=h1_sz, heads=attn_heads)), 
-            ('trunk bn 0', nn.BatchNorm1d(num_features=h1_sz)),
-            ('trunk elu 0', nn.ELU()),
-            ('trunk gc 1', GATConv(in_channels=h1_sz, out_channels=h2_sz, heads=attn_heads)), 
-            ('trunk bn 1', nn.BatchNorm1d(num_features=h2_sz)),
-            ('trunk relu 1', nn.ReLU())
-        ]
+        self.trunk_mlist = nn.ModuleList([
+            GATConv(in_channels=node_size_in, out_channels=h1_sz, heads=attn_heads), 
+            nn.BatchNorm1d(num_features=h1_sz),
+            nn.ELU(),
+            GATConv(in_channels=h1_sz, out_channels=h2_sz, heads=attn_heads), 
+            nn.BatchNorm1d(num_features=h2_sz),
+            nn.ReLU()
+        ])
         for i in range(res_blocks):
-            self.trunk_odict.append(('GAT res block {}'.format(i), GATResBlock(channels=h2_sz, heads=attn_heads)))     
+            self.trunk_mlist.append(GATResBlock(channels=h2_sz, heads=attn_heads))
 
     def forward(self, x, edge_index):
-        for l in self.trunk_odict:
-            _, layer = l
+        for layer in self.trunk_mlist:
             if isinstance(layer, (GATConv, GATResBlock)):
                 x = layer(x, edge_index)
             else:
