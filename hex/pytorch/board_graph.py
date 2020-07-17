@@ -148,7 +148,7 @@ class BoardGraph():
             self.edge_index = adj.indices()
             # remove node attributes
             mask = torch.ones_like(self.node_attr[:,0]).bool()
-            nodes_ndx = nodes_ndx if isinstance(nodes_ndx, torch.Tensor) else torch.tensor(nodes_ndx, dtype=torch.long)
+            nodes_ndx = nodes_ndx if isinstance(nodes_ndx, torch.Tensor) else torch.tensor(nodes_ndx, dtype=torch.long, device=self.device)
             mask.scatter_(0, nodes_ndx, False)
             self.node_attr = self.node_attr[mask]
             self.action_map = self.action_map[mask]
