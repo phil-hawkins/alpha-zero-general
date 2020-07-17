@@ -184,7 +184,7 @@ class BoardGraph():
 
         #adj = self.adjacency_matrix
         stone_mask = self.node_attr[:, 0] != 0
-        untraversed = set(np.arange(len(stone_mask), device=self.device)[stone_mask].tolist())
+        untraversed = set(np.arange(len(stone_mask))[stone_mask].tolist())
         old_node_ndxs = []
         
         while len(untraversed) > 0:
