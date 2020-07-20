@@ -69,7 +69,7 @@ def main(_argv):
         log.info("Loading 'trainExamples' from file...")
         c.loadTrainExamples()
 
-    log.info('Starting the learning process 🎉')
+    log.info('Starting the learning process')
     c.learn()
 
 
