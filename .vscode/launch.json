@@ -12,6 +12,19 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "redirectOutput": true
+        },
+        {
+            "name": "Hex CNN 3x3",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/hex_main.py",
+            "console": "integratedTerminal",
+            "redirectOutput": true,
+            "args" : [
+                "--game_board_size", "3",
+                "--nnet", "base_cnn",
+                "--load_folder", "./temp/cnn_3x3"
+            ]
         }
     ]
 }

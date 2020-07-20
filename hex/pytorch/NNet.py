@@ -30,7 +30,7 @@ args = dotdict({
 
 class NNetWrapper(NeuralNet):
     def __init__(self, game, net_type="base_gat"):
-    self.net_type = net_type
+        self.net_type = net_type
         args.board_size = game.board_size
         if self.net_type == "base_cnn":
             self.nnet = CNNHex.base_cnn(game, args)

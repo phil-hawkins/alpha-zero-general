@@ -17,7 +17,7 @@ class HexGame(Game):
         self.next_player = 1
 
     @property
-    def board_size(self)
+    def board_size(self):
         assert self._base_board.width == self._base_board.height
         return self._base_board.width
 
