@@ -22,7 +22,7 @@ flags.DEFINE_string('nnet', 'base_gat', 'neural net for p,v estimation')
 flags.DEFINE_string('save_prefix', 'base_gat_', 'prefix for best model save file')
 flags.DEFINE_integer('numItersForTrainExamplesHistory', 20, 'Number of training iterations to keep examples for')
 
-flags.DEFINE_boolean('load_model', True, 'load model and training examples from checkpoint')
+flags.DEFINE_boolean('load_model', False, 'load model and training examples from checkpoint')
 flags.DEFINE_string('load_folder', './temp/', 'load model from folder')
 flags.DEFINE_string('load_file', 'best.pth.tar', 'load model from file')
 flags.DEFINE_integer('start_iteration', 1, 'Iteration to start training at')
