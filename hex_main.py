@@ -42,11 +42,11 @@ def main(_argv):
         'arenaCompare': FLAGS.arenaCompare,
         'cpuct': FLAGS.cpuct,
 
-        'checkpoint': FLAGS.load_folder
+        'checkpoint': FLAGS.load_folder,
         'save_prefix' : FLAGS.save_prefix,
         'load_model': FLAGS.load_model,
         'load_folder_file': (FLAGS.load_folder, FLAGS.load_file),
-        'numItersForTrainExamplesHistory': FLAGS.numItersForTrainExamplesHistory
+        'numItersForTrainExamplesHistory': FLAGS.numItersForTrainExamplesHistory,
 
         'start_iteration': FLAGS.start_iteration
     })    
