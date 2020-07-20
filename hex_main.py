@@ -22,9 +22,10 @@ flags.DEFINE_string('nnet', 'base_gat', 'neural net for p,v estimation')
 flags.DEFINE_string('save_prefix', 'base_gat_', 'prefix for best model save file')
 flags.DEFINE_integer('numItersForTrainExamplesHistory', 20, 'Number of training iterations to keep examples for')
 
-flags.DEFINE_boolean('load_model', False, 'load model from checkpoint')
-flags.DEFINE_string('load_folder', 'temp', 'load model from folder')
+flags.DEFINE_boolean('load_model', True, 'load model and training examples from checkpoint')
+flags.DEFINE_string('load_folder', './temp/', 'load model from folder')
 flags.DEFINE_string('load_file', 'best.pth.tar', 'load model from file')
+flags.DEFINE_integer('start_iteration', 1, 'Iteration to start training at')
 
 
 log = logging.getLogger(__name__)
@@ -41,11 +42,13 @@ def main(_argv):
         'arenaCompare': FLAGS.arenaCompare,
         'cpuct': FLAGS.cpuct,
 
-        'checkpoint': './temp/',
+        'checkpoint': FLAGS.load_folder
         'save_prefix' : FLAGS.save_prefix,
         'load_model': FLAGS.load_model,
         'load_folder_file': (FLAGS.load_folder, FLAGS.load_file),
         'numItersForTrainExamplesHistory': FLAGS.numItersForTrainExamplesHistory
+
+        'start_iteration': FLAGS.start_iteration
     })    
 
     log.info('Loading %s...', HexGame.__name__)

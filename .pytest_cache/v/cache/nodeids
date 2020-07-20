@@ -1,7 +1,7 @@
 [
-  "tests/hex_test.py::Test_Hex::test_board",
-  "tests/hex_test.py::Test_Hex::test_winstate",
   "tests/graphnet_test.py::Test_GraphNet::test_model",
   "tests/graphnet_test.py::Test_GraphNet::test_model_batch",
-  "tests/graphnet_test.py::Test_GraphNet::test_position_encoding"
+  "tests/graphnet_test.py::Test_GraphNet::test_position_encoding",
+  "tests/hex_test.py::Test_Hex::test_board",
+  "tests/hex_test.py::Test_Hex::test_winstate"
 ]

@@ -1,4 +1,0 @@
-{
-  "tests/graphnet_test.py": true,
-  "tests/graphnet_test.py::Test_GraphNet": true
-}
