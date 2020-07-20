@@ -77,7 +77,7 @@ class Coach():
         only if it wins >= updateThreshold fraction of games.
         """
 
-        for i in range(args.start_iteration, args.start_iteration + self.args.numIters):
+        for i in range(self.args.start_iteration, self.args.start_iteration + self.args.numIters):
             # bookkeeping
             log.info(f'Starting Iter #{i} ...')
             # examples of the iteration
