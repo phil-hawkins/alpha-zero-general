@@ -24,14 +24,14 @@ args = dotdict({
     'cuda': torch.cuda.is_available(),
     'num_channels': 128,#32,
     'res_blocks' : 5,
-    'board_size' : 7,
     'in_channels' : 3                   # 0/1/2 - black/white/empty
 })
 
 
 class NNetWrapper(NeuralNet):
     def __init__(self, game, net_type="base_gat"):
-        self.net_type = net_type
+    self.net_type = net_type
+        args.board_size = game.board_size
         if self.net_type == "base_cnn":
             self.nnet = CNNHex.base_cnn(game, args)
         elif self.net_type == "scalefree_base_cnn":

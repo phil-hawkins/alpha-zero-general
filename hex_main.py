@@ -16,8 +16,7 @@ flags.DEFINE_integer('maxlenOfQueue', 200000, 'Number of game examples to train 
 flags.DEFINE_integer('numMCTSSims', 500, 'Number of games moves for MCTS to simulate')
 flags.DEFINE_integer('arenaCompare', 40, 'Number of games to play during arena play to determine if new net will be accepted')
 flags.DEFINE_integer('cpuct', 1, 'constant multiplier for predictor + upper confidence (bouund/threshold?) function (modified from PUCB in http://gauss.ececs.uc.edu/Conferences/isaim2010/papers/rosin.pdf)')
-flags.DEFINE_integer('game_board_height', None, 'overide default height')
-flags.DEFINE_integer('game_board_width', None, 'overide default width')
+flags.DEFINE_integer('game_board_size', None, 'overide default size')
 flags.DEFINE_string('nnet', 'base_gat', 'neural net for p,v estimation')
 flags.DEFINE_string('save_prefix', 'base_gat_', 'prefix for best model save file')
 flags.DEFINE_integer('numItersForTrainExamplesHistory', 20, 'Number of training iterations to keep examples for')
@@ -52,7 +51,7 @@ def main(_argv):
     })    
 
     log.info('Loading %s...', HexGame.__name__)
-    g = HexGame(height=FLAGS.game_board_height, width=FLAGS.game_board_width)
+    g = HexGame(height=FLAGS.game_board_size, width=FLAGS.game_board_size)
 
     log.info('Loading %s...', nn.__name__)
     nnet = nn(g, net_type=FLAGS.nnet)

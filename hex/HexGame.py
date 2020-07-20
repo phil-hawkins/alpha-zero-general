@@ -16,6 +16,11 @@ class HexGame(Game):
         self._base_board = Board(height, width, np_pieces)
         self.next_player = 1
 
+    @property
+    def board_size(self)
+        assert self._base_board.width == self._base_board.height
+        return self._base_board.width
+
     def getInitBoard(self):
         return self._base_board.np_pieces
 
