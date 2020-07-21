@@ -17,7 +17,6 @@ from .scale_cnn import CNNHex, RecurrentCNNHex
 from .graph_net import GraphNet
 
 args = dotdict({
-    'lr': 0.001,
     'dropout': 0.3,
     'epochs': 10,
     'batch_size': 64,
@@ -31,7 +30,7 @@ args = dotdict({
 class NNetWrapper(NeuralNet):
     def __init__(self, game, net_type="base_gat"):
         self.net_type = net_type
-        args.board_size = game.board_size
+        args['board_size'] = game.board_size
         if self.net_type == "base_cnn":
             self.nnet = CNNHex.base_cnn(game, args)
         elif self.net_type == "scalefree_base_cnn":
@@ -40,12 +39,11 @@ class NNetWrapper(NeuralNet):
             args.res_blocks = 2
             self.nnet = RecurrentCNNHex.recurrent_cnn(game, args)
         elif self.net_type == "base_gat":        
-            args.batch_size = 16
-            args.num_channels = 32
-            args.expand_base = 2
-            args.attn_heads = 1
-            args.pos_encoding_sz = 28
-            args.readout_attn_heads = 4
+            args['num_channels'] = 32
+            args['expand_base'] = 2
+            args['attn_heads'] = 1
+            args['pos_encoding_sz'] = 28
+            args['readout_attn_heads'] = 4
             self.nnet = GraphNet(args)
         else:
             assert False, "Unknown network {}".format(nnet)
@@ -73,6 +71,8 @@ class NNetWrapper(NeuralNet):
             t = tqdm(range(batch_count), desc='Training Net')
             for _ in t:
                 sample_ids = np.random.randint(len(examples), size=args.batch_size)
+                # TODO: pad the example boards to the same size as the current training boardto give a consistent tensor size
+                # not actions will be different on different board sizes
                 boards, pis, vs = list(zip(*[examples[i] for i in sample_ids]))
                 boards = torch.FloatTensor(np.array(boards).astype(np.float64))
                 target_pis = torch.FloatTensor(np.array(pis))

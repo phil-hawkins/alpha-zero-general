@@ -20,21 +20,21 @@ any agent.
 flags.DEFINE_boolean('human_vs_cpu', False, 'play interactivly with a human')
 flags.DEFINE_boolean('verbose', False, 'show playout')
 flags.DEFINE_integer('num_games', 2, 'Number of games to play')
-flags.DEFINE_string('cpu1_checkpoint', 'base_cnn/base_cnn_best_e50.pth.tar', 'pretrained weights for computer player 1')
-flags.DEFINE_string('cpu2_checkpoint', 'base_cnn/base_cnn_best_e50.pth.tar', 'pretrained weights for computer player 2')
-flags.DEFINE_integer('game_board_height', 7, 'overide default height')
-flags.DEFINE_integer('game_board_width', 7, 'overide default width')
+flags.DEFINE_string('cpu1_checkpoint', 'temp/gat/temp.pth.tar', 'pretrained weights for computer player 1')
+flags.DEFINE_string('cpu2_checkpoint', 'temp/gat/temp.pth.tar', 'pretrained weights for computer player 2')
+flags.DEFINE_integer('game_board_size', 4, 'overide default size')
+flags.DEFINE_string('nnet', 'base_gat', 'neural net for p,v estimation')
 
 def main(_argv):
-    g = HexGame(FLAGS.game_board_height, FLAGS.game_board_width)
+    g = HexGame(FLAGS.game_board_size, FLAGS.game_board_size)
 
     # all players
     rp = RandomPlayer(g).play
     hp = HumanHexPlayer(g).play
     
     # nnet players
-    n1 = NNet(g)
-    n1.load_checkpoint('./pretrained_models/hex/', FLAGS.cpu1_checkpoint)
+    n1 = NNet(g, net_type=FLAGS.nnet)
+    n1.load_checkpoint('./', FLAGS.cpu1_checkpoint)
     args1 = dotdict({'numMCTSSims': 50, 'cpuct':1.0})
     mcts1 = MCTS(g, n1, args1)
     n1p = lambda x: np.argmax(mcts1.getActionProb(x, temp=0))
@@ -43,7 +43,7 @@ def main(_argv):
         player2 = hp
     else:
         n2 = NNet(g)
-        n2.load_checkpoint('./pretrained_models/hex/', FLAGS.cpu2_checkpoint)
+        n2.load_checkpoint('./', FLAGS.cpu2_checkpoint)
         args2 = dotdict({'numMCTSSims': 50, 'cpuct': 1.0})
         mcts2 = MCTS(g, n2, args2)
         n2p = lambda x: np.argmax(mcts2.getActionProb(x, temp=0))

@@ -5,10 +5,12 @@ import coloredlogs
 
 from Coach import Coach
 from hex.HexGame import HexGame
-from hex.pytorch.NNet import NNetWrapper as nn
+from hex.pytorch.NNet import NNetWrapper as nn, args as nn_args
 from utils import dotdict
 
-flags.DEFINE_integer('numIters', 1000, 'Number of training iterations to run')
+flags.DEFINE_integer('numIters', 1, 'Number of training iterations to run')
+flags.DEFINE_float('learning_rate', 1e-4, 'network learning rate')
+flags.DEFINE_integer('batch_size', 64, 'network training batch size')
 flags.DEFINE_integer('numEps', 100, 'Number of complete self-play games to simulate during a new iteration')
 flags.DEFINE_integer('tempThreshold', 15, '?')
 flags.DEFINE_float('updateThreshold', 0.6, 'During arena playoff, new neural net will be accepted if threshold or more of games are won')
@@ -25,6 +27,7 @@ flags.DEFINE_boolean('load_model', False, 'load model and training examples from
 flags.DEFINE_string('load_folder', './temp/', 'load model from folder')
 flags.DEFINE_string('load_file', 'best.pth.tar', 'load model from file')
 flags.DEFINE_integer('start_iteration', 1, 'Iteration to start training at')
+
 
 
 log = logging.getLogger(__name__)
@@ -49,6 +52,8 @@ def main(_argv):
 
         'start_iteration': FLAGS.start_iteration
     })    
+    nn_args['lr'] = FLAGS.learning_rate
+    nn_args['batch_size'] = FLAGS.batch_size
 
     log.info('Loading %s...', HexGame.__name__)
     g = HexGame(height=FLAGS.game_board_size, width=FLAGS.game_board_size)
@@ -57,7 +62,7 @@ def main(_argv):
     nnet = nn(g, net_type=FLAGS.nnet)
 
     if args.load_model:
-        log.info('Loading checkpoint "%s/%s"...', args.load_folder_file)
+        log.info('Loading checkpoint "%s/%s"...', args.load_folder_file[0], args.load_folder_file[1])
         nnet.load_checkpoint(args.load_folder_file[0], args.load_folder_file[1])
     else:
         log.warning('Not loading a checkpoint!')

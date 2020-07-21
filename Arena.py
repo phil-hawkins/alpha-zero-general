@@ -65,7 +65,7 @@ class Arena():
             self.display(board)
         return curPlayer * self.game.getGameEnded(board, curPlayer)
 
-    def playGames(self, num, verbose=False):
+    def playGames(self, num, verbose=False, p_order_results=False):
         """
         Plays num games in which player1 starts num/2 games and player2 starts
         num/2 games.
@@ -77,27 +77,34 @@ class Arena():
         """
 
         num = int(num / 2)
-        oneWon = 0
-        twoWon = 0
+        oneWon_p1, oneWon_p2 = 0, 0
+        twoWon_p1, twoWon_p2 = 0, 0
         draws = 0
-        for _ in tqdm(range(num), desc="Arena.playGames (1)"):
-            gameResult = self.playGame(verbose=verbose)
-            if gameResult == 1:
-                oneWon += 1
-            elif gameResult == -1:
-                twoWon += 1
-            else:
-                draws += 1
+        with tqdm(range(num), desc="Arena.playGames (1)") as t:
+            for _ in t:
+                gameResult = self.playGame(verbose=verbose)
+                if gameResult == 1:
+                    oneWon_p1 += 1
+                elif gameResult == -1:
+                    twoWon_p2 += 1
+                else:
+                    draws += 1
+                t.set_postfix(p1=oneWon_p1, p2=twoWon_p2)
 
         self.player1, self.player2 = self.player2, self.player1
 
-        for _ in tqdm(range(num), desc="Arena.playGames (2)"):
-            gameResult = self.playGame(verbose=verbose)
-            if gameResult == -1:
-                oneWon += 1
-            elif gameResult == 1:
-                twoWon += 1
-            else:
-                draws += 1
+        with tqdm(range(num), desc="Arena.playGames (2)") as t:
+            for _ in t:
+                gameResult = self.playGame(verbose=verbose)
+                if gameResult == -1:
+                    oneWon_p2 += 1
+                elif gameResult == 1:
+                    twoWon_p1 += 1
+                else:
+                    draws += 1
+                t.set_postfix(p1=twoWon_p1, p2=oneWon_p2)
 
-        return oneWon, twoWon, draws
+        if p_order_results:
+            return oneWon_p1, oneWon_p2, twoWon_p1, twoWon_p2, draws
+        else:
+            return oneWon_p1+oneWon_p2, twoWon_p1+twoWon_p2, draws

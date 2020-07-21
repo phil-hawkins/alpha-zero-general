@@ -116,9 +116,12 @@ class Coach():
             log.info('PITTING AGAINST PREVIOUS VERSION')
             arena = Arena(lambda x: np.argmax(pmcts.getActionProb(x, temp=0)),
                           lambda x: np.argmax(nmcts.getActionProb(x, temp=0)), self.game)
-            pwins, nwins, draws = arena.playGames(self.args.arenaCompare)
+            pwins_p1, pwins_p2, nwins_p1, nwins_p2, draws = arena.playGames(self.args.arenaCompare, p_order_results=True)
+            pwins = pwins_p1+pwins_p2
+            nwins = nwins_p1+nwins_p2
 
             log.info('NEW/PREV WINS : %d / %d ; DRAWS : %d' % (nwins, pwins, draws))
+            log.info('NEW P1/P2 : {}/{} PREV P1/P2 : {}/{}'.format(nwins_p1, nwins_p2, pwins_p1, pwins_p2))
             if pwins + nwins == 0 or float(nwins) / (pwins + nwins) < self.args.updateThreshold:
                 log.info('REJECTING NEW MODEL')
                 self.nnet.load_checkpoint(folder=self.args.checkpoint, filename='temp.pth.tar')
