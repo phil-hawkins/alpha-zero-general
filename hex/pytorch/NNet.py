@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import math
 
 import numpy as np
 from tqdm import tqdm
@@ -71,11 +72,12 @@ class NNetWrapper(NeuralNet):
         if args.cuda:
             self.nnet.cuda()
 
-    def train(self, examples):
+    def train(self, examples, checkpoint_folder="checkpoint"):
         """
         examples: list of examples, each example is of form (board, pi, v)
         """
         optimizer = optim.Adam(self.nnet.parameters())
+        min_loss = math.inf
 
         for epoch in range(args.epochs):
             print('EPOCH ::: ' + str(epoch + 1))
@@ -105,6 +107,11 @@ class NNetWrapper(NeuralNet):
                 l_v = self.loss_v(target_vs, out_v)
                 total_loss = l_pi + l_v
 
+                # track best model 
+                if total_loss < min_loss:
+                    min_loss = total_loss
+                    self.save_checkpoint(folder=checkpoint_folder, filename='best.pth.tar')
+
                 # record loss
                 pi_losses.update(l_pi.item(), boards.size(0))
                 v_losses.update(l_v.item(), boards.size(0))
@@ -114,6 +121,8 @@ class NNetWrapper(NeuralNet):
                 optimizer.zero_grad()
                 total_loss.backward()
                 optimizer.step()
+
+        self.load_checkpoint(folder=checkpoint_folder, filename='best.pth.tar')
 
     def predict(self, board):
         """
