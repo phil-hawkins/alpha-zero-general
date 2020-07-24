@@ -54,8 +54,8 @@ class Coach():
             episodeStep += 1
             canonicalBoard = self.game.getCanonicalForm(board, self.curPlayer)
 
-            if 'start_temp' in args and (args['start_temp'] > 1.0) and (self.args.tempThreshold > 0) and (episodeStep < self.args.tempThreshold):
-                temp_step = (args['start_temp'] - 1.0) / self.args.tempThreshold
+            if 'start_temp' in self.args and (self.args['start_temp'] > 1.0) and (self.args.tempThreshold > 0) and (episodeStep < self.args.tempThreshold):
+                temp_step = (self.args['start_temp'] - 1.0) / self.args.tempThreshold
                 steps_till_threshold = self.args.tempThreshold - episodeStep
                 temp = 1.0 + (temp_step * steps_till_threshold)
             else:
