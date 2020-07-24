@@ -53,7 +53,13 @@ class Coach():
         while True:
             episodeStep += 1
             canonicalBoard = self.game.getCanonicalForm(board, self.curPlayer)
-            temp = int(episodeStep < self.args.tempThreshold)
+
+            if 'start_temp' in args and (args['start_temp'] > 1.0) and (self.args.tempThreshold > 0) and (episodeStep < self.args.tempThreshold):
+                temp_step = (args['start_temp'] - 1.0) / self.args.tempThreshold
+                steps_till_threshold = self.args.tempThreshold - episodeStep
+                temp = 1.0 + (temp_step * steps_till_threshold)
+            else:
+                temp = int(episodeStep < self.args.tempThreshold)
 
             pi = self.mcts.getActionProb(canonicalBoard, temp=temp)
             sym = self.game.getSymmetries(canonicalBoard, pi)

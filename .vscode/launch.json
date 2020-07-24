@@ -44,6 +44,64 @@
                 "--start_iteration", "4",
                 "--numEps", "0"
             ]
+        },
+        {
+            "name": "Hex GAT 4x4",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/hex_main.py",
+            "console": "integratedTerminal",
+            "redirectOutput": true,
+            "args" : [
+                "--game_board_size", "4",
+                "--nnet", "base_gat",
+                "--load_folder", "./temp/gat",
+                "--load_model",
+                "--load_file", "checkpoint_3.pth.tar",
+                "--numMCTSSims", "20",
+                "--numIters", "1",
+                "--start_iteration", "4",
+                "--numEps", "1"
+            ]
+        },
+        {
+            "name": "Hex Pit 5x5",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/pit_hex.py",
+            "console": "integratedTerminal",
+            "redirectOutput": true,
+            "args" : [
+                "--game_board_size", "5",
+                "--verbose", 
+                "--player2", "human"
+            ]
+        },
+        {
+            "name": "Hex Pit 5x5 - net vs MCTS",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/pit_hex.py",
+            "console": "integratedTerminal",
+            "redirectOutput": true,
+            "args" : [
+                "--game_board_size", "5",
+                "--verbose", 
+                "--player2", "MCTS"
+            ]
+        },
+        {
+            "name": "Hex Pit 6x6",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/pit_hex.py",
+            "console": "integratedTerminal",
+            "redirectOutput": true,
+            "args" : [
+                "--game_board_size", "6",
+                "--verbose", 
+                "--player2", "human"
+            ]
         }
     ]
 }

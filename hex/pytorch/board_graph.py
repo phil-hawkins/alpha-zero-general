@@ -22,7 +22,8 @@ class Board():
         for c in range(self.np_pieces.shape[1]):
             board_str += "----"
         for r in range(self.np_pieces.shape[0]):
-            board_str += "\n{}{} ` ".format(r*"  ", r)
+            row_chr = chr(ord("a") + r)
+            board_str += "\n{}{} ` ".format(r*"  ", row_chr)
             for c in range(self.np_pieces.shape[1]):
                 board_str += "  {} ".format(display_chars[self.np_pieces[r,c].item()])
             board_str += "`"
@@ -51,6 +52,23 @@ class BoardGraph():
 
     def __str__(self):
         return "Node Attributes:\n{}\n\nAdjacency Matrix:\n{}\n\nBoard Map: {}\n".format(self.node_attr, self.adjacency_matrix.to_dense(), self.action_map)
+
+    @classmethod
+    def random_graph(cls, max_diameter, device):
+        """ the graph is built from a standard hex board of max_diameter size but with up to 4 nodes merged with neighbours
+        """
+        g = cls.graph_from_board(Board(torch.zeros((max_diameter, max_diameter), device=device)))
+
+        r, c = randint(0, self.max_diameter-1), randint(0, self.max_diameter-1)
+        mcells = set()
+        mcells.add((r, c))
+        mcells.add((c, r))
+        mcells.add((self.max_diameter-r, self.max_diameter-c))
+        mcells.add((self.max_diameter-c, self.max_diameter-r))
+
+        for cell in mcells:
+            cell_ndx = cell[0] * self.max_diameter + cell[1]
+            
 
     @classmethod
     def graph_from_board(cls, board):

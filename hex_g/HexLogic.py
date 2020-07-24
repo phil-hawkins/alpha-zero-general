@@ -1,54 +1,36 @@
 from collections import namedtuple
 import numpy as np
 import torch
+from random import randint
+from hex.pytorch.board_graph import BoardGraph
 
-from hex.pytorch.board_graph import Board as DisplayBoard
-
-DEFAULT_HEIGHT = 7
-DEFAULT_WIDTH = 7
 
 WinState = namedtuple('WinState', ['is_ended', 'winner'])
 
 
 class Board():
     """
-    Hex Board.
+    Hex Board played on an a graph.
     """
-    nkernel = np.array([
-        [-1, 0],
-        [-1, 1],
-        [0, 1],
-        [1, 0],
-        [1, -1],
-        [0, -1]
-    ])
 
-    def __init__(self, height=None, width=None, np_pieces=None):
-        "Set up initial board configuration."
-        self.height = height or DEFAULT_HEIGHT
-        self.width = width or DEFAULT_WIDTH
+    def __init__(self, graph):
+        """Set up initial board configuration."""
+        self.max_diameter = max_diameter
         self.winner = None
-
-        if np_pieces is None:
-            self.np_pieces = np.zeros([self.height, self.width], dtype=np.int)
-        else:
-            self.np_pieces = np_pieces
-            assert self.np_pieces.shape == (self.height, self.width)
+        self.g = graph
+        for i in range(len(self.g.nodes)):
+            self.g.nodes[i]['state'] = 0
 
     def add_stone(self, action, player):
-        r, c = divmod(action, self.width)
-        self.add_stone_rc(r, c, player)
+        assert self.g['state'] == 0
+        self.g['state'] = player
     
-    def add_stone_rc(self, row, column, player):
-        "Create copy of board containing new stone."
-        if self.np_pieces[row, column] != 0:
-            raise ValueError("Can't play ({},{}) on board \n{}".format(row, column, self.display_string))
-
-        self.np_pieces[row, column] = player
-
     def get_valid_moves(self):
         "Any zero value is a valid move"
-        return self.np_pieces.reshape(-1) == 0
+        valids = []
+        for i in range(len(self.g.nodes)):
+            append(self.g.nodes[i]['state'] == 0)
+        return valids
 
     def neighbors(self, cell, board_state):
         """ get the 1-hop adjacent cells to a given cell
@@ -106,11 +88,6 @@ class Board():
 
         return WinState(False, None)
 
-    def with_np_pieces(self, np_pieces):
-        """Create copy of board with specified pieces."""
-        if np_pieces is None:
-            np_pieces = self.np_pieces
-        return Board(self.height, self.width, np_pieces)
 
     @classmethod
     def np_display_string(cls, np_pieces):

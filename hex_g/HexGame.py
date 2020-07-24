@@ -8,12 +8,12 @@ from .HexLogic import Board
 
 class HexGame(Game):
     """
-    Hex Game class implementing the alpha-zero-general Game interface.
+    Hex on graph game class implementing the alpha-zero-general Game interface.
     """
 
-    def __init__(self, height=None, width=None, np_pieces=None):
+    def __init__(self, board):
         Game.__init__(self)
-        self._base_board = Board(height, width, np_pieces)
+        self._base_board = board
         self.next_player = 1
 
     @property
@@ -39,7 +39,7 @@ class HexGame(Game):
         self.next_player = -player
         return b.np_pieces, self.next_player
 
-    def getValidMoves(self, board, player=None):
+    def getValidMoves(self, board, player):
         """Any empty cell is a valid move"""
         return self._base_board.with_np_pieces(np_pieces=board).get_valid_moves()
 
