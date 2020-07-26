@@ -10,6 +10,12 @@ DEFAULT_WIDTH = 7
 WinState = namedtuple('WinState', ['is_ended', 'winner'])
 
 
+
+def short_path_value(np_pieces):
+    #TODO:
+    board_size = np_pieces.shape[0]
+    pass
+
 class Board():
     """
     Hex Board.

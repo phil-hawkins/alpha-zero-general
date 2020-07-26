@@ -13,7 +13,6 @@ class RandomPlayer():
         return a
 
 
-
 class HumanHexPlayer():
     def __init__(self, game):
         self.game = game

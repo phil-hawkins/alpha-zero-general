@@ -30,8 +30,9 @@ args = dotdict({
 class FakeNNet(NeuralNet):
     """ fake neural network that does random predictions for pitting an oponent against pure MCTS
     """
-    def __init__(self, game, net_type=None):
+    def __init__(self, game, net_type=None, value_function=None):
         self.game = game
+        self.value_function = value_function if value_function else lambda x : 0.
 
     def predict(self, board):
         valids = self.game.getValidMoves(board)
@@ -40,9 +41,9 @@ class FakeNNet(NeuralNet):
         np.random.shuffle(v_ndx)
         action_ndx = v_ndx[0]
         pi[action_ndx] = 1.0
-        v = 0.0
+        v = self.value_function(board)
 
-        return pi, v
+        return pi, v    
 
 
 class NNetWrapper(NeuralNet):

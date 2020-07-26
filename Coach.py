@@ -120,8 +120,8 @@ class Coach():
             nmcts = MCTS(self.game, self.nnet, self.args)
 
             log.info('PITTING AGAINST PREVIOUS VERSION')
-            arena = Arena(lambda x: np.argmax(pmcts.getActionProb(x, temp=0)),
-                          lambda x: np.argmax(nmcts.getActionProb(x, temp=0)), self.game)
+            arena = Arena(lambda x, p: np.argmax(pmcts.getActionProb(x, temp=0)),
+                          lambda x, p: np.argmax(nmcts.getActionProb(x, temp=0)), self.game)
             pwins_p1, pwins_p2, nwins_p1, nwins_p2, draws = arena.playGames(self.args.arenaCompare, p_order_results=True)
             pwins = pwins_p1+pwins_p2
             nwins = nwins_p1+nwins_p2
