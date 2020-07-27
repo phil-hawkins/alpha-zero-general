@@ -68,7 +68,6 @@ class BoardGraph():
 
         for cell in mcells:
             cell_ndx = cell[0] * self.max_diameter + cell[1]
-            
 
     @classmethod
     def graph_from_board(cls, board):
@@ -81,15 +80,15 @@ class BoardGraph():
         k = torch.tensor([
             [-1, -1,  0,  1,  1,  0],
             [ 0,  1,  1,  0, -1, -1]]
-        , device=device).unsqueeze(dim=1).expand(2, board.cell_count, 6).reshape(2,-1)
+        , device=device).unsqueeze(dim=1).expand(2, board.cell_count, 6).reshape(2, -1)
         c = torch.ones((board.size, board.size), device=device).to_sparse().indices()
-        c = c.unsqueeze(dim=2).expand(2, board.cell_count, 6).reshape(2,-1)
+        c = c.unsqueeze(dim=2).expand(2, board.cell_count, 6).reshape(2, -1)
         edge_index = torch.cat([c, c + k], dim=0)
 
         # remove off-board edges
         mask = (edge_index.min(dim=0)[0] >= 0) & (edge_index.max(dim=0)[0] < board.size)
-        edge_index = edge_index[:, mask].view(2,2,-1)
-        edge_index = edge_index[:,0] * board.size + edge_index[:,1]
+        edge_index = edge_index[:, mask].view(2, 2, -1)
+        edge_index = edge_index[:, 0] * board.size + edge_index[:, 1]
 
         # add edges to left and right side nodes
         next_node_ndx = board.size**2
@@ -215,6 +214,12 @@ class BoardGraph():
         
         self.remove_nodes(old_node_ndxs)
 
+    def get_neighbourhood(self, node_ndx):
+        """ get the indicies of the nodes that share an edge with the node at node_ndx
+        """
+        neighbourhood_mask = self.edge_index[0, :] == node_ndx
+        return self.edge_index[1, neighbourhood_mask].unique()
+
         
 class PlayerGraph(BoardGraph):
     def __init__(self, node_attr, edge_index, action_map, player):
@@ -255,6 +260,31 @@ class PlayerGraph(BoardGraph):
         a = torch.nn.functional.pad(a, (0,padding,0,0))
 
         return a
+
+    def shortest_path(self):
+        """ finds the shortest path between the two distingused terminal nodes
+        measured in empty cells. 
+        """
+        def update_node_dist(node_ndx, dist):
+            for n in node_ndx:
+                if nd[n] > dist:
+                    # increment distance if the node is an empty cell
+                    ndist = dist
+                    if self.node_attr[n, 0] == 0:
+                        ndist += 1
+                    nd[n] = ndist
+                    nbr_ndx = self.get_neighbourhood(n)
+                    update_node_dist(nbr_ndx, ndist)
+
+        # indicies of terminal nodes
+        tn1_ndx = self.node_attr[:, 1].bool().nonzero()[0,0]
+        tn2_ndx = self.node_attr[:, 2].bool().nonzero()[0,0]
+        # min distance for each node from t1
+        nd = np.full((self.node_attr.size(0),), dtype=np.float, fill_value=math.inf)
+        update_node_dist([tn1_ndx], 0)
+
+        return nd[tn2_ndx]
+
 
     # def reset_dgraph(self):
     #     self.d_edge_index = torch.stack([

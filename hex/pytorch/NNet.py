@@ -16,6 +16,7 @@ import torch.optim as optim
 #from .Connect4NNet import Connect4NNet as c4nnet
 from .scale_cnn import CNNHex, RecurrentCNNHex
 from .graph_net import GraphNet
+from .board_graph import Board, BoardGraph, PlayerGraph
 
 args = dotdict({
     'dropout': 0.3,
@@ -37,14 +38,31 @@ class FakeNNet(NeuralNet):
     def predict(self, board):
         valids = self.game.getValidMoves(board)
         pi = np.zeros_like(valids, dtype=np.float32)
-        v_ndx = np.nonzero(valids)[0]
-        np.random.shuffle(v_ndx)
-        action_ndx = v_ndx[0]
+        valids_ndx = np.nonzero(valids)[0]
+        np.random.shuffle(valids_ndx)
+        action_ndx = valids_ndx[0]
         pi[action_ndx] = 1.0
         v = self.value_function(board)
 
         return pi, v    
 
+def value_from_shortest_path(board):
+    """ takes a matrix representation of the board and calculates a state value based on a 
+    comparison of shortest paths of each player
+    """
+    board_size = board.shape[0]
+    bg = BoardGraph.graph_from_board(Board(torch.tensor(board)))
+    g_p1, g_p2 = PlayerGraph.from_board_graph(bg, 1), PlayerGraph.from_board_graph(bg, -1)
+    sp_p1, sp_p2 = g_p1.shortest_path(), g_p2.shortest_path()
+
+    if sp_p1 == 0:
+        v = 1.0
+    elif sp_p2 == 0:
+        v = -1.0
+    else:
+        v = (sp_p2 - sp_p1) / board_size
+
+    return v
 
 class NNetWrapper(NeuralNet):
     def __init__(self, game, net_type="base_gat"):
