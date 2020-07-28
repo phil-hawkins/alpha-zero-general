@@ -149,15 +149,18 @@ class Coach():
         f.closed
 
     def loadTrainExamples(self):
-        modelFile = os.path.join(self.args.load_folder_file[0], self.args.load_folder_file[1])
-        examplesFile = modelFile + ".examples"
+        if self.args.examples_file is None:
+            modelFile = os.path.join(self.args.load_folder_file[0], self.args.load_folder_file[1])
+            examplesFile = modelFile + ".examples"
+        else:
+            examplesFile = os.path.join(self.args.load_folder_file[0], self.args.examples_file)
         if not os.path.isfile(examplesFile):
             log.warning(f'File "{examplesFile}" with trainExamples not found!')
             # r = input("Continue? [y|n]")
             # if r != "y":
             #     sys.exit()
         else:
-            log.info("File with trainExamples found. Loading it...")
+            log.info("File with trainExamples found - {}.\n Loading it...".format(examplesFile))
             with open(examplesFile, "rb") as f:
                 self.trainExamplesHistory = Unpickler(f).load()
             log.info('Loading done!')

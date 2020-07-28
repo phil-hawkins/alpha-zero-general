@@ -27,6 +27,7 @@ flags.DEFINE_integer('numItersForTrainExamplesHistory', 20, 'Number of training 
 flags.DEFINE_boolean('load_model', False, 'load model and training examples from checkpoint')
 flags.DEFINE_string('load_folder', './temp/', 'load model from folder')
 flags.DEFINE_string('load_file', 'best.pth.tar', 'load model from file')
+flags.DEFINE_string('examples_file', None, 'load examples from file')
 flags.DEFINE_integer('start_iteration', 1, 'Iteration to start training at')
 
 
@@ -49,6 +50,7 @@ def main(_argv):
         'save_prefix' : FLAGS.save_prefix,
         'load_model': FLAGS.load_model,
         'load_folder_file': (FLAGS.load_folder, FLAGS.load_file),
+        'examples_file' : FLAGS.examples_file,
         'numItersForTrainExamplesHistory': FLAGS.numItersForTrainExamplesHistory,
 
         'start_iteration': FLAGS.start_iteration

@@ -340,6 +340,18 @@ class PositionalEncoder(torch.nn.Module):
 
         return x
 
+class NullPositionalEncoder(torch.nn.Module):
+    def __init__(self, d_model):
+        super().__init__()
+        self.d_model = d_model
+
+    def forward(self, x):
+        device = x.device
+        x = torch.zeros(x.size(0), self.d_model)
+
+        return x
+
+
 # b = Board(torch.zeros(4,4).long())
 # b.np_pieces[1,0] = -1
 # b.np_pieces[1,1] = -1

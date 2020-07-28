@@ -16,7 +16,7 @@ import torch.optim as optim
 #from .Connect4NNet import Connect4NNet as c4nnet
 from .scale_cnn import CNNHex, RecurrentCNNHex
 from .graph_net import GraphNet
-from .board_graph import Board, BoardGraph, PlayerGraph
+from .board_graph import Board, BoardGraph, PlayerGraph, NullPositionalEncoder
 
 args = dotdict({
     'dropout': 0.3,
@@ -82,6 +82,14 @@ class NNetWrapper(NeuralNet):
             args['pos_encoding_sz'] = 28
             args['readout_attn_heads'] = 4
             self.nnet = GraphNet(args)
+        elif self.net_type == "gat_null_pe":
+            args['num_channels'] = 32
+            args['expand_base'] = 2
+            args['attn_heads'] = 1
+            args['pos_encoding_sz'] = 28
+            args['readout_attn_heads'] = 4
+            self.nnet = GraphNet(args)
+            self.nnet.position_encoder = NullPositionalEncoder(d_model=args['pos_encoding_sz'])
         else:
             assert False, "Unknown network {}".format(nnet)
 

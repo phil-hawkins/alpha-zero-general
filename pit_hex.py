@@ -25,11 +25,12 @@ flags.DEFINE_enum('player2', 'nnet',
 flags.DEFINE_boolean('verbose', False, 'show playout')
 flags.DEFINE_integer('num_games', 2, 'Number of games to play')
 flags.DEFINE_string('cpu1_checkpoint', 'temp/gat/strong_5x5_b.pth.tar', 'pretrained weights for computer player 1')
-flags.DEFINE_string('cpu2_checkpoint', 'temp/gat/strong_4x4.pth.tar', 'pretrained weights for computer player 2')
+flags.DEFINE_string('cpu2_checkpoint', 'temp/gat/strong_5x5_b.pth.tar', 'pretrained weights for computer player 2')
 flags.DEFINE_integer('p1_MCTS_sims', 100, 'number of simulated steps taken by tree search for player 1')
 flags.DEFINE_integer('p2_MCTS_sims', 100, 'number of simulated steps taken by tree search for player 2 if usincg MCTS')
 flags.DEFINE_integer('game_board_size', 5, 'overide default size')
-flags.DEFINE_string('nnet', 'base_gat', 'neural net for p,v estimation')
+flags.DEFINE_string('p1_nnet', 'base_gat', 'neural net for p,v estimation for player 1')
+flags.DEFINE_string('p2_nnet', 'gat_null_pe', 'neural net for p,v estimation for player 2')
 
 
 def get_action_func(search):
@@ -43,7 +44,7 @@ def main(_argv):
     g = HexGame(FLAGS.game_board_size, FLAGS.game_board_size)
 
     # nnet player 1
-    n1 = NNet(g, net_type=FLAGS.nnet)
+    n1 = NNet(g, net_type=FLAGS.p1_nnet)
     n1.load_checkpoint('./', FLAGS.cpu1_checkpoint)
     args1 = dotdict({'numMCTSSims': FLAGS.p1_MCTS_sims, 'cpuct': 1.0})
     mcts1 = MCTS(g, n1, args1)
@@ -55,11 +56,12 @@ def main(_argv):
     elif FLAGS.player2 == 'random':
         player2 = RandomPlayer(g).play
     elif FLAGS.player2 == 'nnet':
-        n2 = NNet(g, net_type=FLAGS.nnet)
+        n2 = NNet(g, net_type=FLAGS.p2_nnet)
         n2.load_checkpoint('./', FLAGS.cpu2_checkpoint)
         args2 = dotdict({'numMCTSSims': FLAGS.p2_MCTS_sims, 'cpuct': 1.0})
         mcts2 = MCTS(g, n2, args2)
-        player2 = lambda x, p: np.argmax(mcts2.getActionProb(x, temp=0))
+        #player2 = lambda x, p: np.argmax(mcts2.getActionProb(x, temp=0))
+        player2 = get_action_func(mcts2)
     elif FLAGS.player2 == 'MCTS':
         n2 = FakeNNet(g, value_function=value_from_shortest_path)
         args2 = dotdict({'numMCTSSims': FLAGS.p2_MCTS_sims, 'cpuct': 1.0})
