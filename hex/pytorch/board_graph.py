@@ -330,7 +330,7 @@ class ZeroIdentifierEncoder(torch.nn.Module):
 
     def forward(self, x):
         device = x.device
-        x = torch.zeros(x.size(0), self.d_model, device=self.device)
+        x = torch.zeros(x.size(0), self.d_model, device=device)
 
         return x
 
@@ -341,7 +341,7 @@ class RandomIdentifierEncoder(torch.nn.Module):
 
     def forward(self, x):
         device = x.device
-        x = torch.rand(x.size(0), self.d_model, device=self.device)
+        x = torch.rand(x.size(0), self.d_model, device=device)
 
         return x
 
