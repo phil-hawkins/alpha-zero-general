@@ -16,7 +16,7 @@ import torch.optim as optim
 #from .Connect4NNet import Connect4NNet as c4nnet
 from .scale_cnn import CNNHex, RecurrentCNNHex
 from .graph_net import GraphNet
-from .board_graph import Board, BoardGraph, PlayerGraph, ZeroIdentifierEncoder, RandomIdentifierEncoder
+from .board_graph import Board, BoardGraph, PlayerGraph, IdentifierEncoder, ZeroIdentifierEncoder, RandomIdentifierEncoder
 
 args = dotdict({
     'dropout': 0.3,
@@ -66,6 +66,13 @@ def value_from_shortest_path(board):
 
 class NNetWrapper(NeuralNet):
     def __init__(self, game, net_type="base_gat"):
+        def random_id_args(d_model):
+            args['num_channels'] = 32
+            args['expand_base'] = 2
+            args['attn_heads'] = 1
+            args['readout_attn_heads'] = 4
+            args['id_encoder'] = RandomIdentifierEncoder(d_model=d_model)
+
         self.net_type = net_type
         args['board_size'] = game.board_size
         if self.net_type == "base_cnn":
@@ -79,25 +86,28 @@ class NNetWrapper(NeuralNet):
             args['num_channels'] = 32
             args['expand_base'] = 2
             args['attn_heads'] = 1
-            args['id_embedding_sz'] = 28
             args['readout_attn_heads'] = 4
+            args['id_encoder'] = IdentifierEncoder(d_model=28, max_seq_len=500)   
             self.nnet = GraphNet(args)
         elif self.net_type == "gat_zero_id":
             args['num_channels'] = 32
             args['expand_base'] = 2
             args['attn_heads'] = 1
-            args['id_embedding_sz'] = 28
             args['readout_attn_heads'] = 4
+            args['id_encoder'] = ZeroIdentifierEncoder(d_model=28)
             self.nnet = GraphNet(args)
-            self.nnet.id_encoder = ZeroIdentifierEncoder(d_model=args['id_embedding_sz'])
         elif self.net_type == "gat_random_id":
-            args['num_channels'] = 32
-            args['expand_base'] = 2
-            args['attn_heads'] = 1
-            args['id_embedding_sz'] = 28
-            args['readout_attn_heads'] = 4
+            random_id_args(28)
             self.nnet = GraphNet(args)
-            self.nnet.id_encoder = RandomIdentifierEncoder(d_model=args['id_embedding_sz'])
+        elif self.net_type == "gat_random_id_1d":
+            random_id_args(1)
+            self.nnet = GraphNet(args)
+        elif self.net_type == "gat_random_id_10d":
+            random_id_args(10)
+            self.nnet = GraphNet(args)
+        elif self.net_type == "gat_random_id_20d":
+            random_id_args(20)
+            self.nnet = GraphNet(args)
         else:
             assert False, "Unknown network {}".format(nnet)
 

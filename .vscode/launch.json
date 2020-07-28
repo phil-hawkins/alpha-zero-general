@@ -91,6 +91,21 @@
             ]
         },
         {
+            "name": "Hex Pit 5x5 - id embedding test",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/pit_hex.py",
+            "console": "integratedTerminal",
+            "redirectOutput": true,
+            "args" : [
+                "--game_board_size", "5",
+                "--num_games", "2",
+                "--verbose", 
+                "--cpu1_checkpoint", "temp/gat/strong_5x5_b.pth.tar", "--p1_MCTS_sims", "100", "--p1_nnet", "base_gat",
+                "--player2", "nnet", "--cpu2_checkpoint", "temp/gat/strong_5x5_b.pth.tar", "--p2_MCTS_sims", "100", "--p2_nnet", "gat_random_id_10d"
+            ]
+        },
+        {
             "name": "Hex Pit 6x6",
             "type": "python",
             "request": "launch",

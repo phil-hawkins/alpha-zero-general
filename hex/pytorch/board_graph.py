@@ -300,7 +300,7 @@ class PlayerGraph(BoardGraph):
 class IdentifierEncoder(torch.nn.Module):
     def __init__(self, d_model, max_seq_len=200, base_wave_length=5):
         super().__init__()
-        assert((d_model % 2) == 0)
+        assert (d_model % 2) == 0, "identifier embedding must have an even number of dimentions"
         self.d_model = d_model
         
         # create constant 'pe' matrix with values dependant on 

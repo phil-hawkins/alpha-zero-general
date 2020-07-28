@@ -123,7 +123,7 @@ class GraphNet(nn.Module):
         h1_sz = self.node_size_in*args.expand_base
         h2_sz = self.node_size_in*(args.expand_base**2)
 
-        self.id_encoder = IdentifierEncoder(d_model=args.id_embedding_sz, max_seq_len=500)      
+        self.id_encoder = args.id_encoder
         self.trunk = Trunk(self.node_size_in, h1_sz, h2_sz, args.attn_heads, args.res_blocks)
         self.p_head = PolicyHead(channels=h2_sz, action_size=args.board_size**2)
         self.v_head = ValueHead(channels=h2_sz, attn_heads=args.readout_attn_heads)
