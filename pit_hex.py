@@ -30,7 +30,7 @@ flags.DEFINE_integer('p1_MCTS_sims', 100, 'number of simulated steps taken by tr
 flags.DEFINE_integer('p2_MCTS_sims', 100, 'number of simulated steps taken by tree search for player 2 if usincg MCTS')
 flags.DEFINE_integer('game_board_size', 5, 'overide default size')
 flags.DEFINE_string('p1_nnet', 'base_gat', 'neural net for p,v estimation for player 1')
-flags.DEFINE_string('p2_nnet', 'gat_null_pe', 'neural net for p,v estimation for player 2')
+flags.DEFINE_string('p2_nnet', 'base_gat', 'neural net for p,v estimation for player 2')
 
 
 def get_action_func(search):

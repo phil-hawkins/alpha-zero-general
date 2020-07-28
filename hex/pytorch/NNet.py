@@ -16,7 +16,7 @@ import torch.optim as optim
 #from .Connect4NNet import Connect4NNet as c4nnet
 from .scale_cnn import CNNHex, RecurrentCNNHex
 from .graph_net import GraphNet
-from .board_graph import Board, BoardGraph, PlayerGraph, NullPositionalEncoder
+from .board_graph import Board, BoardGraph, PlayerGraph, ZeroIdentifierEncoder, RandomIdentifierEncoder
 
 args = dotdict({
     'dropout': 0.3,
@@ -79,17 +79,25 @@ class NNetWrapper(NeuralNet):
             args['num_channels'] = 32
             args['expand_base'] = 2
             args['attn_heads'] = 1
-            args['pos_encoding_sz'] = 28
+            args['id_embedding_sz'] = 28
             args['readout_attn_heads'] = 4
             self.nnet = GraphNet(args)
-        elif self.net_type == "gat_null_pe":
+        elif self.net_type == "gat_zero_id":
             args['num_channels'] = 32
             args['expand_base'] = 2
             args['attn_heads'] = 1
-            args['pos_encoding_sz'] = 28
+            args['id_embedding_sz'] = 28
             args['readout_attn_heads'] = 4
             self.nnet = GraphNet(args)
-            self.nnet.position_encoder = NullPositionalEncoder(d_model=args['pos_encoding_sz'])
+            self.nnet.id_encoder = ZeroIdentifierEncoder(d_model=args['id_embedding_sz'])
+        elif self.net_type == "gat_random_id":
+            args['num_channels'] = 32
+            args['expand_base'] = 2
+            args['attn_heads'] = 1
+            args['id_embedding_sz'] = 28
+            args['readout_attn_heads'] = 4
+            self.nnet = GraphNet(args)
+            self.nnet.id_encoder = RandomIdentifierEncoder(d_model=args['id_embedding_sz'])
         else:
             assert False, "Unknown network {}".format(nnet)
 

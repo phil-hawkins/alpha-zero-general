@@ -3,7 +3,7 @@ import torch.nn as nn
 from collections import OrderedDict
 from torch_geometric.nn import GATConv
 
-from .board_graph import Board, BoardGraph, PlayerGraph, PositionalEncoder
+from .board_graph import Board, BoardGraph, PlayerGraph, IdentifierEncoder
 
 
 
@@ -123,7 +123,7 @@ class GraphNet(nn.Module):
         h1_sz = self.node_size_in*args.expand_base
         h2_sz = self.node_size_in*(args.expand_base**2)
 
-        self.position_encoder = PositionalEncoder(d_model=args.pos_encoding_sz, max_seq_len=500)      
+        self.id_encoder = IdentifierEncoder(d_model=args.id_embedding_sz, max_seq_len=500)      
         self.trunk = Trunk(self.node_size_in, h1_sz, h2_sz, args.attn_heads, args.res_blocks)
         self.p_head = PolicyHead(channels=h2_sz, action_size=args.board_size**2)
         self.v_head = ValueHead(channels=h2_sz, attn_heads=args.readout_attn_heads)
@@ -152,7 +152,7 @@ class GraphNet(nn.Module):
             for i, player in enumerate([-1, 1]):
                 player_graph[i] = PlayerGraph.from_board_graph(bg, player)
                 edge_index[i].append(player_graph[i].edge_index + node_ndx_start[i])
-                a = player_graph[i].get_node_attr(size=self.node_size_in, position_encoder=self.position_encoder)
+                a = player_graph[i].get_node_attr(size=self.node_size_in, id_encoder=self.id_encoder)
                 node_attr[i].append(a)
                 node_ndx_start[i] += a.size(0)
                 g = torch.cat((

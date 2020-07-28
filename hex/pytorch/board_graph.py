@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import math
 
+
 class Board():
     def __init__(self, np_pieces):
         assert np_pieces.size(0) == np_pieces.size(1)
@@ -10,9 +11,9 @@ class Board():
     @property
     def display_string(self):
         display_chars = {
-            0 : ".", 
-            -1 : "H", 
-            1 : "V"
+            0: ".",
+            -1: "H",
+            1: "V"
         }
 
         board_str = "`  "
@@ -25,7 +26,7 @@ class Board():
             row_chr = chr(ord("a") + r)
             board_str += "\n{}{} ` ".format(r*"  ", row_chr)
             for c in range(self.np_pieces.shape[1]):
-                board_str += "  {} ".format(display_chars[self.np_pieces[r,c].item()])
+                board_str += "  {} ".format(display_chars[self.np_pieces[r, c].item()])
             board_str += "`"
         board_str += "\n    {}".format(r*"  ")
         for c in range(self.np_pieces.shape[1]):
@@ -42,7 +43,6 @@ class Board():
         return self.np_pieces.numel()
 
 
-
 class BoardGraph():
     def __init__(self, node_attr, edge_index, action_map):
         self.node_attr = node_attr
@@ -54,32 +54,16 @@ class BoardGraph():
         return "Node Attributes:\n{}\n\nAdjacency Matrix:\n{}\n\nBoard Map: {}\n".format(self.node_attr, self.adjacency_matrix.to_dense(), self.action_map)
 
     @classmethod
-    def random_graph(cls, max_diameter, device):
-        """ the graph is built from a standard hex board of max_diameter size but with up to 4 nodes merged with neighbours
-        """
-        g = cls.graph_from_board(Board(torch.zeros((max_diameter, max_diameter), device=device)))
-
-        r, c = randint(0, self.max_diameter-1), randint(0, self.max_diameter-1)
-        mcells = set()
-        mcells.add((r, c))
-        mcells.add((c, r))
-        mcells.add((self.max_diameter-r, self.max_diameter-c))
-        mcells.add((self.max_diameter-c, self.max_diameter-r))
-
-        for cell in mcells:
-            cell_ndx = cell[0] * self.max_diameter + cell[1]
-
-    @classmethod
     def graph_from_board(cls, board):
         """ create directed edge index for a standard hex board
 
-        returns: 
+        returns:
             graph object
         """
         device = board.np_pieces.device
         k = torch.tensor([
             [-1, -1,  0,  1,  1,  0],
-            [ 0,  1,  1,  0, -1, -1]]
+            [0,  1,  1,  0, -1, -1]]
         , device=device).unsqueeze(dim=1).expand(2, board.cell_count, 6).reshape(2, -1)
         c = torch.ones((board.size, board.size), device=device).to_sparse().indices()
         c = c.unsqueeze(dim=2).expand(2, board.cell_count, 6).reshape(2, -1)
@@ -109,14 +93,14 @@ class BoardGraph():
             torch.arange(board.size, dtype=torch.long, device=device) + (board.size * (board.size-1))
         ])
         side_edge_index = torch.cat([left_edges, right_edges, top_edges, bottom_edges], dim=1)
-        edge_index = torch.cat([edge_index, side_edge_index, side_edge_index[[1,0]]], dim=1)
+        edge_index = torch.cat([edge_index, side_edge_index, side_edge_index[[1, 0]]], dim=1)
         board_node_attr = torch.zeros((board.np_pieces.numel(), 3), dtype=torch.long, device=device)
         board_node_attr[:, 0] = board.np_pieces.flatten()
         side_node_attr = torch.tensor([
-            [-1, 1, 0], # player -1 (H) side 1
-            [-1, 0, 1], # player -1 (H) side 2
-            [1, 1, 0],  # player 1 (V) side 1
-            [1, 0, 1]   # player 1 (V) side 2
+            [-1, 1, 0],     # player -1 (H) side 1
+            [-1, 0, 1],     # player -1 (H) side 2
+            [1, 1, 0],      # player 1 (V) side 1
+            [1, 0, 1]       # player 1 (V) side 2
         ], dtype=torch.long, device=device)
 
         node_attr = torch.cat([board_node_attr, side_node_attr])
@@ -133,7 +117,7 @@ class BoardGraph():
         return torch.sparse_coo_tensor(indices=self.edge_index, values=v, dtype=torch.long, device=self.edge_index.device)
 
     def merge_nodes(self, nodes_ndx):
-        assert len(nodes_ndx) > 0 
+        assert len(nodes_ndx) > 0
         # merge attributes, preservice any side connection flags
         new_node_attr, _ = self.node_attr[nodes_ndx].max(dim=0)
         dadj = self.adjacency_matrix.to_dense()
@@ -146,7 +130,7 @@ class BoardGraph():
         new_node_col_ndx = torch.full_like(new_edge_col, fill_value=new_node_ndx)
 
         self.node_attr = torch.cat([self.node_attr, new_node_attr.unsqueeze(dim=0)])
-        self.action_map = torch.nn.functional.pad(self.action_map, (0,0,0,1))
+        self.action_map = torch.nn.functional.pad(self.action_map, (0, 0, 0, 1))
         self.edge_index = torch.cat([
             torch.stack([new_edge_row, new_node_row_ndx]),
             torch.stack([new_node_col_ndx, new_edge_col]),
@@ -164,7 +148,7 @@ class BoardGraph():
             adj = dadj[mask].view(new_size, new_size).to_sparse()
             self.edge_index = adj.indices()
             # remove node attributes
-            mask = torch.ones_like(self.node_attr[:,0]).bool()
+            mask = torch.ones_like(self.node_attr[:, 0]).bool()
             nodes_ndx = nodes_ndx if isinstance(nodes_ndx, torch.Tensor) else torch.tensor(nodes_ndx, dtype=torch.long, device=self.device)
             mask.scatter_(0, nodes_ndx, False)
             self.node_attr = self.node_attr[mask]
@@ -179,7 +163,7 @@ class BoardGraph():
             find any neighbour stone nodes
             add them to the merge set
 
-        merge node groups 
+        merge node groups
 
         """
 
@@ -199,7 +183,6 @@ class BoardGraph():
                         to_do.add(n.item())
             return done
 
-        #adj = self.adjacency_matrix
         stone_mask = (self.node_attr[:, 0] != 0).cpu()
         untraversed = set(np.arange(len(stone_mask))[stone_mask].tolist())
         old_node_ndxs = []
@@ -244,20 +227,20 @@ class PlayerGraph(BoardGraph):
 
         return player_graph
 
-    def get_node_attr(self, size, position_encoder=None, add_one_hot_node_id=False):
+    def get_node_attr(self, size, id_encoder=None, add_one_hot_node_id=False):
         a = self.node_attr.float()
         if add_one_hot_node_id:
             node_id = torch.eye(a.size(0), device=self.device)
             a = torch.cat([a, node_id], dim=1)
-        if position_encoder is not None:
+        if id_encoder is not None:
             # generate identifiers for the nodes based on a shuffled range of integers
             # this breaks up meaningless patterns in sequential node identifiers
-            pos = position_encoder(torch.randperm(a.size(0), device=self.device))
-            a = torch.cat([a, pos], dim=1)
+            ids = id_encoder(torch.randperm(a.size(0), device=self.device))
+            a = torch.cat([a, ids], dim=1)
 
         assert a.size(1) <= size, "node attributes too large"
         padding = size - a.size(1)
-        a = torch.nn.functional.pad(a, (0,padding,0,0))
+        a = torch.nn.functional.pad(a, (0, padding, 0, 0))
 
         return a
 
@@ -314,7 +297,7 @@ class PlayerGraph(BoardGraph):
 
 
 # from https://towardsdatascience.com/how-to-code-the-transformer-in-pytorch-24db27c8f9ec
-class PositionalEncoder(torch.nn.Module):
+class IdentifierEncoder(torch.nn.Module):
     def __init__(self, d_model, max_seq_len=200, base_wave_length=5):
         super().__init__()
         assert((d_model % 2) == 0)
@@ -340,7 +323,7 @@ class PositionalEncoder(torch.nn.Module):
 
         return x
 
-class NullPositionalEncoder(torch.nn.Module):
+class ZeroIdentifierEncoder(torch.nn.Module):
     def __init__(self, d_model):
         super().__init__()
         self.d_model = d_model
@@ -351,6 +334,16 @@ class NullPositionalEncoder(torch.nn.Module):
 
         return x
 
+class RandomIdentifierEncoder(torch.nn.Module):
+    def __init__(self, d_model):
+        super().__init__()
+        self.d_model = d_model
+
+    def forward(self, x):
+        device = x.device
+        x = torch.rand(x.size(0), self.d_model)
+
+        return x
 
 # b = Board(torch.zeros(4,4).long())
 # b.np_pieces[1,0] = -1

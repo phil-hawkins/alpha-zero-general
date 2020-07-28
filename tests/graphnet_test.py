@@ -27,7 +27,7 @@ class Test_GraphNet(unittest.TestCase):
             'board_size' : 4,
             'expand_base' : 2,
             'attn_heads' : 1,
-            'pos_encoding_sz' : 28,
+            'id_embedding_sz' : 28,
             'readout_attn_heads' : 4
         })
         x = torch.zeros(args.batch_size, args.board_size, args.board_size).long()
@@ -69,7 +69,7 @@ class Test_GraphNet(unittest.TestCase):
             'board_size' : 7,
             'expand_base' : 2,
             'attn_heads' : 1,
-            'pos_encoding_sz' : 28,
+            'id_embedding_sz' : 28,
             'readout_attn_heads' : 4
         })
 
