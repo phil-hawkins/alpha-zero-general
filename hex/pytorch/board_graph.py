@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import math
 
+from .graph_hex_board import GraphHexBoard
 
 class Board():
     def __init__(self, np_pieces):
@@ -54,7 +55,18 @@ class BoardGraph():
         return "Node Attributes:\n{}\n\nAdjacency Matrix:\n{}\n\nBoard Map: {}\n".format(self.node_attr, self.adjacency_matrix.to_dense(), self.action_map)
 
     @classmethod
-    def graph_from_board(cls, board):
+    def from_graph_board(cls, board):
+        assert isinstance(board, GraphHexBoard)
+        
+        action_map = torch.stack([
+            torch.arange(board.node_attr.size(0), device=board.node_attr.device),  # board_cell
+            (node_attr[:, 0] == 0).long()                    # valid_action (1/0)
+        ], dim=1)
+
+        return cls(board.node_attr, board.edge_index, action_map)
+
+    @classmethod
+    def from_grid_board(cls, board):
         """ create directed edge index for a standard hex board
 
         returns:

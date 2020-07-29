@@ -147,7 +147,7 @@ class GraphNet(nn.Module):
         node_ndx_start = [0, 0]
         batch = [[], []]
         for bi, board in enumerate(x):
-            bg = BoardGraph.graph_from_board(Board(board))
+            bg = BoardGraph.from_grid_board(Board(board))
             bg.merge_groups()
             for i, player in enumerate([-1, 1]):
                 player_graph[i] = PlayerGraph.from_board_graph(bg, player)
@@ -206,3 +206,12 @@ class GraphNet(nn.Module):
         v = self.v_head(out[0], out[1], batch)
 
         return p, v
+
+class NativeGraphNet(GraphNet):
+    """ accepts input natively in graph format rather than a grid tensor 
+    """
+    def to_player_graphs(self, x):
+        # TODO
+        bg = BoardGraph.from_grid_board(x)
+
+        return edge_index, node_attr, batch
