@@ -4,6 +4,9 @@ import torch
 from scipy.spatial.distance import cdist
 from scipy.spatial import Delaunay, Voronoi, voronoi_plot_2d
 from scipy.sparse import dok_matrix
+from matplotlib.patches import Polygon
+from matplotlib.collections import PatchCollection
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
 WinState = namedtuple('WinState', ['is_ended', 'winner'])
@@ -119,11 +122,11 @@ class GraphHexBoard():
                 if node_ndx in left_border_ndx and node_ndx in top_border_ndx:
                     missing_pts = np.array([[-0.1, pre_pt[1]], [-0.1, 1.1], [post_pt[0], 1.1]])
                 elif node_ndx in top_border_ndx and node_ndx in right_border_ndx:
-                    missing_pts = np.array([[pre_pt[0], 1.1], [1.1, 1.1], [1.1, post_pt[1]]])
+                    missing_pts = np.array([[post_pt[0], 1.1], [1.1, 1.1], [1.1, pre_pt[1]]])
                 elif node_ndx in right_border_ndx and node_ndx in bottom_border_ndx:
                     missing_pts = np.array([[post_pt[0], -0.1], [1.1, -0.1], [1.1, pre_pt[1]]])
                 elif node_ndx in bottom_border_ndx and node_ndx in left_border_ndx:
-                    missing_pts = np.array([[post_pt[0], -0.1], [-0.1, -0.1], [-0.1, pre_pt[1]]])
+                    missing_pts = np.array([[pre_pt[0], -0.1], [-0.1, -0.1], [-0.1, post_pt[1]]])
                 elif node_ndx in left_border_ndx:
                     missing_pts = np.array([[-0.1, pre_pt[1]], [-0.1, post_pt[1]]])
                 elif node_ndx in right_border_ndx:
@@ -132,7 +135,6 @@ class GraphHexBoard():
                     missing_pts = np.array([[pre_pt[0], 1.1], [post_pt[0], 1.1]])
                 elif node_ndx in bottom_border_ndx:
                     missing_pts = np.array([[pre_pt[0], -0.1], [post_pt[0], -0.1]])
-                
 
                 vor_region = np.concatenate([pre_verts, missing_pts, post_verts])
             else:
@@ -161,15 +163,46 @@ class GraphHexBoard():
 
     def plot(self):
         vor = Voronoi(self.tri.points)
+        
         plt.rcParams['figure.figsize'] = [10, 10]
-        fig = voronoi_plot_2d(vor, show_points=False, show_vertices=False, line_colors='blue', line_width=2, line_alpha=0.8, point_size=2)
-        plt.triplot(self.tri.points[:, 0], self.tri.points[:, 1], self.tri.simplices)
-        plt.plot(self.tri.points[:, 0], self.tri.points[:, 1], 'o')
+        fig, ax = plt.subplots()
 
-        ax = plt.gca()
+        voronoi_plot_2d(vor, ax=ax, show_points=False, show_vertices=False, line_colors='blue', line_width=2, line_alpha=0.8, point_size=2)
+    
+        patches = []
+        for region in self.vor_regions:
+            #ax.add_patch(Polygon(region, picker=1))
+            patches.append(Polygon(region))
+        p = PatchCollection(patches, match_original=True, alpha=0.4, picker=1)
+        ax.add_collection(p)
+
+        fig.canvas.mpl_connect('pick_event', self.on_pick_node)
+
+        ax.triplot(self.tri.points[:, 0], self.tri.points[:, 1], self.tri.simplices)
+        ax.plot(self.tri.points[:, 0], self.tri.points[:, 1], 'o')
+
         ax.axes.xaxis.set_visible(False)
         ax.axes.yaxis.set_visible(False)
         plt.show()
+
+    def on_pick_node(self, event):
+        artist = event.artist
+        if isinstance(artist, PatchCollection):
+            node_ndx = event.ind[0]
+            print('class onpick node:', node_ndx)
+            self.add_stone(node_ndx, 1)
+            #facecolors = artist.get_facecolors()
+            #facecolors[node_ndx] = mcolors.to_rgba("crimson")
+            #artist.changed()
+
+            cell_colours = np.stack([
+                mcolors.to_rgba("red"),
+                mcolors.to_rgba("linen"),
+                mcolors.to_rgba("blue")
+            ])
+            facecolors = cell_colours[self.node_attr[:, 0].long() + 1]
+            artist.set_facecolor(facecolors)
+            artist.figure.canvas.draw()
 
     def add_stone(self, action, player):
         assert self.node_attr[action, 0] == 0

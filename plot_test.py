@@ -7,7 +7,7 @@ import sys
 sys.path.append('..')
 from hex.pytorch.graph_hex_board import GraphHexBoard
 
-board = GraphHexBoard.new_vortex_board(6)
+board = GraphHexBoard.new_vortex_board(11)
 vor = Voronoi(board.tri.points, qhull_options="Qbb Qc Qz")
 p1 = vor.vertices[vor.regions[20]]
 p = Polygon(p1)
