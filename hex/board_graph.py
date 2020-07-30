@@ -6,7 +6,7 @@ from .graph_hex_board import GraphHexBoard
 
 class Board():
     def __init__(self, np_pieces):
-        assert np_pieces.size(0) == np_pieces.size(1)
+        assert np_pieces.shape[0] == np_pieces.shape[1]
         self.np_pieces = np_pieces
 
     @property
@@ -37,11 +37,15 @@ class Board():
 
     @property
     def size(self):
-        return self.np_pieces.size(0)
+        return self.np_pieces.shape[0]
 
     @property
     def cell_count(self):
         return self.np_pieces.numel()
+
+    @classmethod
+    def np_display_string(cls, np_pieces):
+        return cls(np_pieces).display_string
 
 
 class BoardGraph():
@@ -59,19 +63,21 @@ class BoardGraph():
         assert isinstance(board, GraphHexBoard)
         
         action_map = torch.stack([
-            torch.arange(board.node_attr.size(0), device=board.node_attr.device),  # board_cell
-            (node_attr[:, 0] == 0).long()                    # valid_action (1/0)
+            torch.arange(board.node_attr.size(0), device=board.node_attr.device),   # board_cell
+            (board.node_attr[:, 0] == 0).long()                                     # valid_action (1/0)
         ], dim=1)
 
         return cls(board.node_attr, board.edge_index, action_map)
 
     @classmethod
-    def from_grid_board(cls, board):
+    def from_matrix_board(cls, board):
         """ create directed edge index for a standard hex board
 
         returns:
             graph object
         """
+        board = Board(np_pieces=board)
+        
         device = board.np_pieces.device
         k = torch.tensor([
             [-1, -1,  0,  1,  1,  0],
@@ -281,31 +287,69 @@ class PlayerGraph(BoardGraph):
         return nd[tn2_ndx]
 
 
-    # def reset_dgraph(self):
-    #     self.d_edge_index = torch.stack([
-    #         torch.arange(self.node_attr.size(0)),
-    #         torch.arange(self.node_attr.size(0))
-    #     ])
-    #     mask = (self.node_attr == 0)
-    #     self.d_edge_connectivity = mask.long() 
-    #     self.d_carrier_index = self.d_edge_index[:, mask].clone()
+def batch_to_net(x, args, device):
+    """ converts a batch of boards to input features suitable for the graph net
 
-    # @property
-    # def d_adjacency_matrix(self):
-    #     return torch.sparse.LongTensor(self.d_edge_index, self.d_edge_connectivity + 1)
+    input x is one of:
+        - np.array (row, col)
+        - np.array (batch, row, col)
+        - GraphHexBoard object
+        - list of GraphHexBoard objects
 
-    # @property
-    # def carrier_adjacency_matrix(self):
-    #     v = torch.ones_like(self.d_carrier_index[0])
-    #     return torch.sparse.LongTensor(self.d_carrier_index, v)
+    returns:
+        each of the following is a 2 element list with the first item for the current player
+        and the second item for the opposing player:
 
-    #def edge_step(self):
-        # for each stone group node
-        #   for each connected empty cell node
-        #       fore each connected node
-        #           if not self loop, add derived edge to cell to d_edge list for group
+        - edge_index : coo index for "super-graph" adjacency matrix (2=from/to, edges)
+                this is a union of all graphs in the batch
+        - node_attr : node embedding as column vectors (node, attributes)
+        - batch: (nodes, features (0-2 below))
+                0 : mapping from nodes to input graphs, as per torch geo batch
+                1 : mask for nodes which are valid actions i.e. empty cells
+                2 : map from node index to action index in original input
+
+    """ 
+    # marshall the input into a batch tensor or a list of graph objects
+    if type(x).__module__ == np.__name__ or isinstance(x, torch.Tensor):
+        x = torch.FloatTensor(x.astype(np.float64)).to(device)
+        if len(x.shape) == 2:           
+            x = x.unsqueeze(dim=0)
         
-        #   for each pair with matching endpoints
+        board_to_graph = BoardGraph.from_matrix_board
+    elif isinstance(x, GraphHexBoard):
+        x = [x]
+        board_to_graph = BoardGraph.from_graph_board
+    elif type(x) == list:
+        board_to_graph = BoardGraph.from_graph_board
+    else:
+        raise Exception("Unsupported batch type for convertion to graph net input")
+
+    # split out the player graphs and build graph net input features from the boards
+    player_graph = [None, None]
+    edge_index, node_attr = [[], []], [[], []]
+    node_ndx_start = [0, 0]
+    batch = [[], []]
+    for bi, board in enumerate(x):
+        bg = board_to_graph(board)
+        bg.merge_groups()
+        for i, player in enumerate([-1, 1]):
+            player_graph[i] = PlayerGraph.from_board_graph(bg, player)
+            edge_index[i].append(player_graph[i].edge_index + node_ndx_start[i])
+            a = player_graph[i].get_node_attr(size=args.num_channels, id_encoder=args.id_encoder)
+            node_attr[i].append(a)
+            node_ndx_start[i] += a.size(0)
+            g = torch.cat((
+                torch.full((a.size(0), 1), dtype=torch.long, fill_value=bi, device=device),
+                player_graph[i].action_map
+            ), dim=1)
+            batch[i].append(g)
+
+    for i in range(2):
+        edge_index[i] = torch.cat(edge_index[i], dim=1)
+        node_attr[i] = torch.cat(node_attr[i], dim=0)
+        batch[i] = torch.cat(batch[i], dim=0)
+
+    return edge_index, node_attr, batch
 
 
 # from https://towardsdatascience.com/how-to-code-the-transformer-in-pytorch-24db27c8f9ec

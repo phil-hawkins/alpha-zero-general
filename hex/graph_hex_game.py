@@ -4,7 +4,7 @@ from copy import deepcopy
 
 sys.path.append('..')
 from Game import Game
-from .HexLogic import Board
+from .graph_hex_board import GraphHexBoard
 
 
 class GraphHexGame(Game):
@@ -20,11 +20,8 @@ class GraphHexGame(Game):
     def getInitBoard(self):
         return self._base_board
 
-    def getBoardSize(self):
-        return (self._base_board.height, self._base_board.width)
-
     def getActionSize(self):
-        return self._base_board.height * self._base_board.width
+        return self._base_board.action_size
 
     def getNextState(self, board, player, action):
         """Returns a copy of the board with updated move, original board is unmodified."""
@@ -62,5 +59,5 @@ class GraphHexGame(Game):
         return [(board, pi)]
 
     def stringRepresentation(self, board):
-        return board.tostring()
+        return board.state_representation
 

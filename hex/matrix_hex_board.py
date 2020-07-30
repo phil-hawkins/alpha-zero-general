@@ -2,21 +2,10 @@ from collections import namedtuple
 import numpy as np
 import torch
 
-from hex.pytorch.board_graph import Board as DisplayBoard
-
-DEFAULT_HEIGHT = 7
-DEFAULT_WIDTH = 7
-
 WinState = namedtuple('WinState', ['is_ended', 'winner'])
 
 
-
-def short_path_value(np_pieces):
-    #TODO:
-    board_size = np_pieces.shape[0]
-    pass
-
-class Board():
+class MatrixHexBoard():
     """
     Hex Board.
     """
@@ -31,8 +20,8 @@ class Board():
 
     def __init__(self, height=None, width=None, np_pieces=None):
         "Set up initial board configuration."
-        self.height = height or DEFAULT_HEIGHT
-        self.width = width or DEFAULT_WIDTH
+        self.height = height or np_pieces.size(0)
+        self.width = width or np_pieces.size(1)
         self.winner = None
 
         if np_pieces is None:
@@ -113,37 +102,10 @@ class Board():
         return WinState(False, None)
 
     def with_np_pieces(self, np_pieces):
-        """Create copy of board with specified pieces."""
+        """Create copy of board with specified np_pieces."""
         if np_pieces is None:
             np_pieces = self.np_pieces
-        return Board(self.height, self.width, np_pieces)
-
-    @classmethod
-    def np_display_string(cls, np_pieces):
-        b = Board(np_pieces.shape[0], np_pieces.shape[1], np_pieces)
-        ds = b.display_string
-
-        return ds
-
-    @property
-    def display_string(self):
-        return DisplayBoard(torch.tensor(self.np_pieces)).display_string
-        # board_str = "   "
-        # for c in range(self.np_pieces.shape[1]):
-        #     board_str += "{}   ".format(c)
-        # board_str += "\n  "
-        # for c in range(self.np_pieces.shape[1]):
-        #     board_str += "----"
-        # for r in range(self.np_pieces.shape[0]):
-        #     board_str += "\n{}{} ` ".format(r*"  ", r)
-        #     for c in range(self.np_pieces.shape[1]):
-        #         board_str += " {: } ".format(self.np_pieces[r,c])
-        #     board_str += "`"
-        # board_str += "\n    {}".format(r*"  ")
-        # for c in range(self.np_pieces.shape[1]):
-        #     board_str += "----"
-
-        # return board_str
+        return self.__class__(self.height, self.width, np_pieces)
 
     def __str__(self):
         return str(self.np_pieces)

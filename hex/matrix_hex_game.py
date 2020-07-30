@@ -3,17 +3,18 @@ import numpy as np
 
 sys.path.append('..')
 from Game import Game
-from .HexLogic import Board
+from .matrix_hex_board import MatrixHexBoard
+from .board_graph import Board
 
 
-class HexGame(Game):
+class MatrixHexGame(Game):
     """
     Hex Game class implementing the alpha-zero-general Game interface.
     """
 
     def __init__(self, height=None, width=None, np_pieces=None):
         Game.__init__(self)
-        self._base_board = Board(height, width, np_pieces)
+        self._base_board = MatrixHexBoard(height, width, np_pieces)
         self.next_player = 1
 
     @property

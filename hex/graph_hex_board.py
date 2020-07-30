@@ -29,8 +29,18 @@ class GraphHexBoard():
             "left": node_attr.size(0)-2,
             "right": node_attr.size(0)-1
         }
+        assert node_attr[self.tnode_ndx['top'], 0] == node_attr[self.tnode_ndx['bottom'], 0]
+        assert node_attr[self.tnode_ndx['left'], 0] == node_attr[self.tnode_ndx['right'], 0]
+        self.player_v = node_attr[self.tnode_ndx['top'], 0].long().numpy().item()
+        self.player_h = node_attr[self.tnode_ndx['left'], 0].long().numpy().item()
+        assert self.player_v + self.player_h == 0
         # Voronoi regions for each node
         self.vor_regions = vor_regions
+
+    @property 
+    def action_size(self):
+        # action size is the number of playable cells on the board
+        return self.node_attr.size(0) - len(self.tnode_ndx)
 
     @classmethod
     def new_vortex_board(cls, size, device="cpu"):
@@ -97,13 +107,14 @@ class GraphHexBoard():
             edge_index = torch.cat([
                 edge_index,
                 new_edge_index,
-                new_edge_index[:, [1, 0]]
+                new_edge_index[[1, 0]]
             ], dim=1)
+            return edge_index
 
-        add_edges(edge_index, node_count-4, top_border_ndx)
-        add_edges(edge_index, node_count-3, bottom_border_ndx)
-        add_edges(edge_index, node_count-2, left_border_ndx)
-        add_edges(edge_index, node_count-1, right_border_ndx)
+        edge_index = add_edges(edge_index, node_count-4, top_border_ndx)
+        edge_index = add_edges(edge_index, node_count-3, bottom_border_ndx)
+        edge_index = add_edges(edge_index, node_count-2, left_border_ndx)
+        edge_index = add_edges(edge_index, node_count-1, right_border_ndx)
 
         # get the Voronoi regions for each node
         vor = Voronoi(points)
@@ -148,32 +159,43 @@ class GraphHexBoard():
         """ return a board with players reversed
         note: graph embedding points are not changed
         """
-        node_attr = self.node_attr.clone()
+        node_attr = self.node_attr.clone().detach()
         node_attr[:, 0] *= -1
 
-        rval = GraphHexBoard(self.edge_index, node_attr, self.tri)
-        rval.tnode_ndx = {
-            "top": self.tnode_ndx["left"],
-            "bottom": self.tnode_ndx["right"],
-            "left": self.tnode_ndx["top"],
-            "right": self.tnode_ndx["bottom"]
-        }
+        rval = GraphHexBoard(self.edge_index, node_attr, self.tri, self.vor_regions)
+        # rval.tnode_ndx = {
+        #     "top": self.tnode_ndx["left"],
+        #     "bottom": self.tnode_ndx["right"],
+        #     "left": self.tnode_ndx["top"],
+        #     "right": self.tnode_ndx["bottom"]
+        # }
 
         return rval
 
+    @property
+    def cell_colours(self):
+        cell_colours = np.stack([
+            mcolors.to_rgba("red"),
+            mcolors.to_rgba("linen"),
+            mcolors.to_rgba("blue")
+        ])
+
+        return cell_colours[self.node_attr[:, 0].long() + 1]
+
     def plot(self):
         vor = Voronoi(self.tri.points)
-        
+
         plt.rcParams['figure.figsize'] = [10, 10]
         fig, ax = plt.subplots()
+        fig.canvas.set_window_title('Vortex')
 
         voronoi_plot_2d(vor, ax=ax, show_points=False, show_vertices=False, line_colors='blue', line_width=2, line_alpha=0.8, point_size=2)
-    
+
         patches = []
         for region in self.vor_regions:
-            #ax.add_patch(Polygon(region, picker=1))
             patches.append(Polygon(region))
         p = PatchCollection(patches, match_original=True, alpha=0.4, picker=1)
+        p.set_facecolor(self.cell_colours)
         ax.add_collection(p)
 
         fig.canvas.mpl_connect('pick_event', self.on_pick_node)
@@ -191,17 +213,7 @@ class GraphHexBoard():
             node_ndx = event.ind[0]
             print('class onpick node:', node_ndx)
             self.add_stone(node_ndx, 1)
-            #facecolors = artist.get_facecolors()
-            #facecolors[node_ndx] = mcolors.to_rgba("crimson")
-            #artist.changed()
-
-            cell_colours = np.stack([
-                mcolors.to_rgba("red"),
-                mcolors.to_rgba("linen"),
-                mcolors.to_rgba("blue")
-            ])
-            facecolors = cell_colours[self.node_attr[:, 0].long() + 1]
-            artist.set_facecolor(facecolors)
+            artist.set_facecolor(self.cell_colours)
             artist.figure.canvas.draw()
 
     def add_stone(self, action, player):
@@ -215,7 +227,7 @@ class GraphHexBoard():
         return list(valids.numpy())
 
     def get_win_state(self):
-        """ checks whether player 1 has made a left-right connection or 
+        """ checks whether player 1 has made a left-right connection or
         player -1 has made a top-bottom connection
         """
         def is_connected(player, start_node, end_node):
@@ -229,8 +241,8 @@ class GraphHexBoard():
                 if node == end_node:
                     return True
 
-                neighbourhood_mask = self.edge_index[:, 0] == node
-                neighbourhood_ndx = self.edge_index[neighbourhood_mask, 1]
+                neighbourhood_mask = self.edge_index[0] == node
+                neighbourhood_ndx = self.edge_index[1, neighbourhood_mask]
                 connected_mask = self.node_attr[neighbourhood_ndx, 0] == player
                 n = set(neighbourhood_ndx[connected_mask].numpy())
                 todo = todo.union(n - done)
@@ -238,12 +250,13 @@ class GraphHexBoard():
 
             return False
 
-        if is_connected(-1, self.tnode_ndx["top"], self.tnode_ndx["bottom"]):
+        if is_connected(self.player_v, self.tnode_ndx["top"], self.tnode_ndx["bottom"]):
             return WinState(True, -1)
-        elif is_connected(1, self.tnode_ndx["left"], self.tnode_ndx["right"]):
+        elif is_connected(self.player_h, self.tnode_ndx["left"], self.tnode_ndx["right"]):
             return WinState(True, 1)
 
-        return WinState(False, None)        
+        return WinState(False, None)
 
-    def __str__(self):
-        return str(self.node_attr[:-4, 0])
+    @property
+    def state_representation(self):
+        return str(self.node_attr[:-4, 0].numpy())

@@ -3,11 +3,7 @@ import torch.nn as nn
 from collections import OrderedDict
 from torch_geometric.nn import GATConv
 
-from .board_graph import Board, BoardGraph, PlayerGraph, IdentifierEncoder
-
-
-
-      
+     
 class GATResBlock(torch.nn.Module):
     def __init__(self, channels, affine_bn=True, heads=1):
         super().__init__()
@@ -28,6 +24,7 @@ class GATResBlock(torch.nn.Module):
         
         return x.relu()
 
+
 class HeadBase(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
@@ -45,6 +42,7 @@ class HeadBase(nn.Module):
         x = self.merge_lin(torch.cat((x0,x1), dim=1))
         
         return x
+
 
 class PolicyHead(HeadBase):
     def __init__(self, channels, action_size):
@@ -65,6 +63,7 @@ class PolicyHead(HeadBase):
         ).to_dense()
 
         return self.readout(out)
+
 
 class ValueHead(HeadBase):
     def __init__(self, channels, attn_heads):
@@ -89,13 +88,14 @@ class ValueHead(HeadBase):
             batch_start_ndx += bc
             out[i], _ = self.mha(query, graph_batch, graph_batch, need_weights=False)
         out = self.readout_lin(out).tanh()
-        
+
         return out
+
 
 class Trunk(nn.Module):
     def __init__(self, node_size_in, h1_sz, h2_sz, attn_heads, res_blocks):
         super().__init__()
-        
+
         self.trunk_mlist = nn.ModuleList([
             GATConv(in_channels=node_size_in, out_channels=h1_sz, heads=attn_heads), 
             nn.BatchNorm1d(num_features=h1_sz),
@@ -115,58 +115,18 @@ class Trunk(nn.Module):
                 x = layer(x)
         return x
 
+
 class GraphNet(nn.Module):
-    def __init__(self, args): # expand_base=2, heads=1, blocks=):
+    def __init__(self, args): 
         super(GraphNet, self).__init__()
 
         self.node_size_in = args.num_channels
         h1_sz = self.node_size_in*args.expand_base
         h2_sz = self.node_size_in*(args.expand_base**2)
 
-        self.id_encoder = args.id_encoder
         self.trunk = Trunk(self.node_size_in, h1_sz, h2_sz, args.attn_heads, args.res_blocks)
-        self.p_head = PolicyHead(channels=h2_sz, action_size=args.board_size**2)
+        self.p_head = PolicyHead(channels=h2_sz, action_size=args.action_size)
         self.v_head = ValueHead(channels=h2_sz, attn_heads=args.readout_attn_heads)
-
-    def to_player_graphs(self, x):
-        """
-        returns:
-            each of the following is a 2 element list with the first item for the current player 
-            and the second item for the opposing player:
-                edge_index : coo index for super-graph adjacency matrix (2=from/to, edges)
-                    this is a union of all graphs in the batch
-                node_attr : node embedding as column vectors (node, attributes)
-                batch: (nodes, features (0-2 below))
-                    0 : mapping from nodes to input graphs, as per torch geo batch
-                    1 : mask for nodes which are valid actions i.e. empty cells
-                    2 : map from node index to action index in original input
-        """
-        device = x.device
-        player_graph = [None, None]
-        edge_index, node_attr = [[], []], [[], []]
-        node_ndx_start = [0, 0]
-        batch = [[], []]
-        for bi, board in enumerate(x):
-            bg = BoardGraph.from_grid_board(Board(board))
-            bg.merge_groups()
-            for i, player in enumerate([-1, 1]):
-                player_graph[i] = PlayerGraph.from_board_graph(bg, player)
-                edge_index[i].append(player_graph[i].edge_index + node_ndx_start[i])
-                a = player_graph[i].get_node_attr(size=self.node_size_in, id_encoder=self.id_encoder)
-                node_attr[i].append(a)
-                node_ndx_start[i] += a.size(0)
-                g = torch.cat((
-                    torch.full((a.size(0), 1), dtype=torch.long, fill_value=bi, device=device),
-                    player_graph[i].action_map
-                ), dim=1)
-                batch[i].append(g)
-        
-        for i in range(2):
-            edge_index[i] = torch.cat(edge_index[i], dim=1)
-            node_attr[i] = torch.cat(node_attr[i], dim=0)
-            batch[i] = torch.cat(batch[i], dim=0)
-
-        return edge_index, node_attr, batch
 
     def align_nodes(self, x, batch):
         # mask out nodes that don't map to valid actions
@@ -176,7 +136,9 @@ class GraphNet(nn.Module):
         return x
 
     def merge_batches(self, batch):
-        # mask out nodes that don't map to valid actions
+        """ mask out nodes that don't map to valid actions
+        so that the actionable (empty cells) align
+        """
         for i in range(2):
             # clear the nodes that don't represent valid actions
             valid_mask = batch[i][:,-1].bool()
@@ -189,8 +151,7 @@ class GraphNet(nn.Module):
         return batch[0]
 
     def forward(self, x):
-        edge_index, node_attr, batch = self.to_player_graphs(x)
-
+        edge_index, node_attr, batch = x
         out = []
         for i in range(2):
             o = self.trunk(node_attr[i], edge_index[i])
@@ -201,7 +162,7 @@ class GraphNet(nn.Module):
         # the batch indicies should be consistant with both sets of nodes at this point
         assert batch.size(0) == out[0].size(0)
         assert batch.size(0) == out[1].size(0)
-        
+
         p = self.p_head(out[0], out[1], batch)
         v = self.v_head(out[0], out[1], batch)
 

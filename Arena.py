@@ -1,6 +1,6 @@
 import logging
-
 from tqdm import tqdm
+from time import sleep
 
 log = logging.getLogger(__name__)
 
@@ -10,7 +10,7 @@ class Arena():
     An Arena class where any 2 agents can be pit against each other.
     """
 
-    def __init__(self, player1, player2, game, display=None, display_move=None):
+    def __init__(self, player1, player2, game, display=None, display_move=None, update_ui=None):
         """
         Input:
             player 1,2: two functions that takes board as input, return action
@@ -27,6 +27,7 @@ class Arena():
         self.game = game
         self.display = display
         self.display_move = display_move
+        self.update_ui = update_ui
 
     def playGame(self, verbose=False):
         """
@@ -48,8 +49,8 @@ class Arena():
                 assert self.display
                 print("\nTurn ", str(it), "Player ", self.game.player_name(curPlayer))
                 self.display(board)
-            action = players[curPlayer + 1](self.game.getCanonicalForm(board, curPlayer), curPlayer)
 
+            action = players[curPlayer + 1](self.game.getCanonicalForm(board, curPlayer), curPlayer)
             valids = self.game.getValidMoves(self.game.getCanonicalForm(board, curPlayer), 1)
 
             if valids[action] == 0:
@@ -59,6 +60,11 @@ class Arena():
             if verbose and self.display_move is not None:
                 self.display_move(action, curPlayer)
             board, curPlayer = self.game.getNextState(board, curPlayer, action)
+            if self.update_ui is not None:
+                self.update_ui(board)
+
+        if self.update_ui is not None:
+            sleep(3)
         if verbose:
             assert self.display
             print("Game over: Turn ", str(it), "Result ", str(self.game.getGameEnded(board, 1)))
