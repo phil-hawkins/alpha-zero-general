@@ -9,9 +9,9 @@
         "-p",
         "*_test.py"
     ],
-    "python.testing.pytestEnabled": true,
+    "python.testing.pytestEnabled": false,
     "python.testing.nosetestsEnabled": false,
-    "python.testing.unittestEnabled": false,
+    "python.testing.unittestEnabled": true,
     "python.testing.nosetestArgs": [
         "tests"
     ],

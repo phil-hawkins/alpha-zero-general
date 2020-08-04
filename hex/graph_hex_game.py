@@ -30,7 +30,7 @@ class GraphHexGame(Game):
         self.next_player = -player
         return board, self.next_player
 
-    def getValidMoves(self, board, player):
+    def getValidMoves(self, board, player=None):
         """Any empty cell is a valid move"""
         return board.get_valid_moves()
 
@@ -50,7 +50,7 @@ class GraphHexGame(Game):
     def getCanonicalForm(self, board, player):
         if player == -1:
             # Flip player from 1 to -1
-            return board.compliment()
+            return board.reverse()
         else:
             return board
 

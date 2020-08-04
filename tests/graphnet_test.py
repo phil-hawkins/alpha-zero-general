@@ -2,8 +2,8 @@ import unittest
 import os,sys; sys.path.insert(0, os.path.abspath('.'))
 import torch
 
-from hex.pytorch.board_graph import Board, PositionalEncoder
-from hex.pytorch.graph_net import GraphNet
+from hex.board_graph import Board, PositionalEncoder
+from hex.models.graph_net import GraphNet
 from utils import dotdict
 
 

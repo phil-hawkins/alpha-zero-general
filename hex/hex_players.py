@@ -5,6 +5,12 @@ from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
+from tqdm import trange
+from copy import deepcopy
+
+from .players import HORIZONTAL_PLAYER, VERTICAL_PLAYER
+from min_mcts.monte_carlo_tree_search import PureMCTS
+from min_mcts.hex_node import HexNode
 
 class RandomPlayer():
     def __init__(self, game):
@@ -41,9 +47,29 @@ class HumanHexPlayer():
         return move
 
 
+class PureMCTSPlayer():
+    def __init__(self, game, sims):
+        self.game = game
+        self.sims = sims
+        self.reset()
+
+    def reset(self):
+        self.tree = PureMCTS()
+        HexNode.base_board = deepcopy(self.game._base_board)
+
+    def on_game_end(self):
+        self.reset()
+
+    def play(self, board, cur_player):
+        root_node = HexNode.from_hex_board(board)
+        for _ in range(self.sims):
+            self.tree.do_rollout(root_node)
+        node = self.tree.choose(root_node)
+        return node.last_action
+
 class UIPlayer():
 
-    def __init__(self, game):
+    def __init__(self, game, show_node_numbers=False, pickable=True):
         self.game = game
         self.vor_patches = None
         self.selected_node_ndx = None
@@ -52,7 +78,8 @@ class UIPlayer():
             mcolors.to_rgba("linen"),
             mcolors.to_rgba("blue")
         ])
-        self.fig = self.show_board()
+        self.show_node_numbers = show_node_numbers
+        self.fig = self.show_board(pickable)
         self.fig.canvas.draw_idle()
         for _ in range(100):
             self.fig.canvas.flush_events()
@@ -92,7 +119,7 @@ class UIPlayer():
         cell_states = board.node_attr[:, 0].long() * cur_player
         self.set_cell_colours(cell_states)
 
-    def show_board(self):
+    def show_board(self, pickable=True):
         plt.ion()
         base_board = self.game.getInitBoard()
         vor = Voronoi(base_board.tri.points)
@@ -116,17 +143,37 @@ class UIPlayer():
             [-0.1, 1.1], 
             [1.1, 1.1]
         ])
-        ax.plot(bounds[0], bounds[1], color=self.cell_colours[base_board.player_h+1], linewidth=10)
-        ax.plot(bounds[2], bounds[1], color=self.cell_colours[base_board.player_h+1], linewidth=10)
-        ax.plot(bounds[1], bounds[0], color=self.cell_colours[base_board.player_v+1], linewidth=10)
-        ax.plot(bounds[1], bounds[2], color=self.cell_colours[base_board.player_v+1], linewidth=10)
+        ax.plot(bounds[0], bounds[1], color=self.cell_colours[HORIZONTAL_PLAYER+1], linewidth=10, alpha=0.5)
+        ax.plot(bounds[2], bounds[1], color=self.cell_colours[HORIZONTAL_PLAYER+1], linewidth=10, alpha=0.5)
+        ax.plot(bounds[1], bounds[0], color=self.cell_colours[VERTICAL_PLAYER+1], linewidth=10, alpha=0.5)
+        ax.plot(bounds[1], bounds[2], color=self.cell_colours[VERTICAL_PLAYER+1], linewidth=10, alpha=0.5)
         
-        fig.canvas.mpl_connect('pick_event', self.on_pick_node)
+        if pickable:
+            fig.canvas.mpl_connect('pick_event', self.on_pick_node)
 
         ax.triplot(base_board.tri.points[:, 0], base_board.tri.points[:, 1], base_board.tri.simplices)
         ax.plot(base_board.tri.points[:, 0], base_board.tri.points[:, 1], 'o')
+
+        # node numbers
+        if self.show_node_numbers:
+            for i, p in enumerate(base_board.tri.points):
+                ax.text(p[0], p[1], str(i), fontsize=12)
 
         ax.axes.xaxis.set_visible(False)
         ax.axes.yaxis.set_visible(False)
         
         return fig
+
+
+class GPureMCTSPlayer(UIPlayer, PureMCTSPlayer):
+    def __init__(self, game, sims, show_node_numbers=False):
+        UIPlayer.__init__(self, game, show_node_numbers, pickable=False)
+        self.sims = sims
+        self.reset()
+    
+    def play(self, board, cur_player):
+        cell_states = board.node_attr[:, 0].long() * cur_player
+        self.set_cell_colours(cell_states)
+        action = PureMCTSPlayer.play(self, board, cur_player)
+
+        return action

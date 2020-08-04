@@ -3,6 +3,7 @@ import torch
 import math
 
 from .graph_hex_board import GraphHexBoard
+from .players import HORIZONTAL_PLAYER, VERTICAL_PLAYER
 
 class Board():
     def __init__(self, np_pieces):
@@ -13,8 +14,8 @@ class Board():
     def display_string(self):
         display_chars = {
             0: ".",
-            -1: "H",
-            1: "V"
+            HORIZONTAL_PLAYER: "H",
+            VERTICAL_PLAYER: "V"
         }
 
         board_str = "`  "
@@ -115,10 +116,10 @@ class BoardGraph():
         board_node_attr = torch.zeros((board.np_pieces.numel(), 3), dtype=torch.long, device=device)
         board_node_attr[:, 0] = board.np_pieces.flatten()
         side_node_attr = torch.tensor([
-            [-1, 1, 0],     # player -1 (H) side 1
-            [-1, 0, 1],     # player -1 (H) side 2
-            [1, 1, 0],      # player 1 (V) side 1
-            [1, 0, 1]       # player 1 (V) side 2
+            [HORIZONTAL_PLAYER, 1, 0],     # player (H) side 1
+            [HORIZONTAL_PLAYER, 0, 1],     # player (H) side 2
+            [VERTICAL_PLAYER, 1, 0],      # player (V) side 1
+            [VERTICAL_PLAYER, 0, 1]       # player (V) side 2
         ], dtype=torch.long, device=device)
 
         node_attr = torch.cat([board_node_attr, side_node_attr])

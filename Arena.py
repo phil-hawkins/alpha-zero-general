@@ -10,7 +10,7 @@ class Arena():
     An Arena class where any 2 agents can be pit against each other.
     """
 
-    def __init__(self, player1, player2, game, display=None, display_move=None, update_ui=None):
+    def __init__(self, player1, player2, game, display=None, display_move=None, on_move_end=None, on_game_end=None):
         """
         Input:
             player 1,2: two functions that takes board as input, return action
@@ -27,7 +27,8 @@ class Arena():
         self.game = game
         self.display = display
         self.display_move = display_move
-        self.update_ui = update_ui
+        self.on_move_end = on_move_end
+        self.on_game_end = on_game_end
 
     def playGame(self, verbose=False):
         """
@@ -60,15 +61,18 @@ class Arena():
             if verbose and self.display_move is not None:
                 self.display_move(action, curPlayer)
             board, curPlayer = self.game.getNextState(board, curPlayer, action)
-            if self.update_ui is not None:
-                self.update_ui(board)
+            if self.on_move_end is not None:
+                self.on_move_end(board)
 
-        if self.update_ui is not None:
+        if self.on_move_end is not None:
             sleep(3)
         if verbose:
             assert self.display
-            print("Game over: Turn ", str(it), "Result ", str(self.game.getGameEnded(board, 1)))
+            log.info("Game over: Turn ", str(it), "Result ", str(self.game.getGameEnded(board, 1)))
             self.display(board)
+        if self.on_game_end:
+            self.on_game_end()
+
         return curPlayer * self.game.getGameEnded(board, curPlayer)
 
     def playGames(self, num, verbose=False, p_order_results=False):

@@ -9,6 +9,8 @@ from matplotlib.collections import PatchCollection
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
+from .players import HORIZONTAL_PLAYER, VERTICAL_PLAYER
+
 WinState = namedtuple('WinState', ['is_ended', 'winner'])
 
 
@@ -23,21 +25,29 @@ class GraphHexBoard():
         self.edge_index = edge_index
         self.node_attr = node_attr
         self.tri = tri
-        self.tnode_ndx = {
-            "top": node_attr.size(0)-4,
-            "bottom": node_attr.size(0)-3,
-            "left": node_attr.size(0)-2,
-            "right": node_attr.size(0)-1
-        }
-        assert node_attr[self.tnode_ndx['top'], 0] == node_attr[self.tnode_ndx['bottom'], 0]
-        assert node_attr[self.tnode_ndx['left'], 0] == node_attr[self.tnode_ndx['right'], 0]
-        self.player_v = node_attr[self.tnode_ndx['top'], 0].long().numpy().item()
-        self.player_h = node_attr[self.tnode_ndx['left'], 0].long().numpy().item()
-        assert self.player_v + self.player_h == 0
+        n = node_attr.size(0)
+        if node_attr[n-4, 0] == VERTICAL_PLAYER:
+            self.tnode_ndx = {
+                "top": n-4,
+                "bottom": n-3,
+                "left": n-2,
+                "right": n-1
+            }
+        else:
+            self.tnode_ndx = {
+                "left": n-4,
+                "right": n-3,
+                "top": n-2,
+                "bottom": n-1
+            }
+        assert node_attr[self.tnode_ndx['top'], 0].long().numpy().item() == VERTICAL_PLAYER
+        assert node_attr[self.tnode_ndx['bottom'], 0].long().numpy().item() == VERTICAL_PLAYER
+        assert node_attr[self.tnode_ndx['left'], 0].long().numpy().item() == HORIZONTAL_PLAYER
+        assert node_attr[self.tnode_ndx['right'], 0].long().numpy().item() == HORIZONTAL_PLAYER
         # Voronoi regions for each node
         self.vor_regions = vor_regions
 
-    @property 
+    @property
     def action_size(self):
         # action size is the number of playable cells on the board
         return self.node_attr.size(0) - len(self.tnode_ndx)
@@ -73,12 +83,18 @@ class GraphHexBoard():
 
         # set up node attribues
         node_count = points.shape[0] + 4
+        tnode_ndx = {
+            "top": node_count-4,
+            "bottom": node_count-3,
+            "left": node_count-2,
+            "right": node_count-1
+        }
         node_attr = torch.zeros((node_count, 3), device=device)
         # set up terminal (off-board) player nodes
-        node_attr[-4] = torch.tensor([-1., 1., 0.])
-        node_attr[-3] = torch.tensor([-1., 0., 1.])
-        node_attr[-2] = torch.tensor([1., 1., 0.])
-        node_attr[-1] = torch.tensor([1., 0., 1.])
+        node_attr[tnode_ndx["top"]] = torch.tensor([VERTICAL_PLAYER, 1., 0.])
+        node_attr[tnode_ndx["bottom"]] = torch.tensor([VERTICAL_PLAYER, 0., 1.])
+        node_attr[tnode_ndx["left"]] = torch.tensor([HORIZONTAL_PLAYER, 1., 0.])
+        node_attr[tnode_ndx["right"]] = torch.tensor([HORIZONTAL_PLAYER, 0., 1.])
 
         # build the adjacency matrix for the graph
         tri = Delaunay(points)
@@ -111,14 +127,16 @@ class GraphHexBoard():
             ], dim=1)
             return edge_index
 
-        edge_index = add_edges(edge_index, node_count-4, top_border_ndx)
-        edge_index = add_edges(edge_index, node_count-3, bottom_border_ndx)
-        edge_index = add_edges(edge_index, node_count-2, left_border_ndx)
-        edge_index = add_edges(edge_index, node_count-1, right_border_ndx)
+        edge_index = add_edges(edge_index, tnode_ndx["top"], top_border_ndx)
+        edge_index = add_edges(edge_index, tnode_ndx["bottom"], bottom_border_ndx)
+        edge_index = add_edges(edge_index, tnode_ndx["left"], left_border_ndx)
+        edge_index = add_edges(edge_index, tnode_ndx["right"], right_border_ndx)
 
         # get the Voronoi regions for each node
         vor = Voronoi(points)
         vor_regions = []
+        # regions for the outer points are not closed so we need to add some extra points
+        # to create closed psuedo-regions for the UI
         for node_ndx, region_ndx in enumerate(vor.point_region):
             region_vert_ndx = vor.regions[region_ndx]
             if -1 in region_vert_ndx:
@@ -155,7 +173,7 @@ class GraphHexBoard():
 
         return cls(edge_index, node_attr, tri, vor_regions)
 
-    def compliment(self):
+    def reverse(self):
         """ return a board with players reversed
         note: graph embedding points are not changed
         """
@@ -163,12 +181,6 @@ class GraphHexBoard():
         node_attr[:, 0] *= -1
 
         rval = GraphHexBoard(self.edge_index, node_attr, self.tri, self.vor_regions)
-        # rval.tnode_ndx = {
-        #     "top": self.tnode_ndx["left"],
-        #     "bottom": self.tnode_ndx["right"],
-        #     "left": self.tnode_ndx["top"],
-        #     "right": self.tnode_ndx["bottom"]
-        # }
 
         return rval
 
@@ -181,6 +193,14 @@ class GraphHexBoard():
         ])
 
         return cell_colours[self.node_attr[:, 0].long() + 1]
+
+    @property 
+    def state_np(self):
+        return self.node_attr[:-len(self.tnode_ndx), 0].numpy()
+
+    @state_np.setter
+    def state_np(self, np_state):
+        self.node_attr[:-len(self.tnode_ndx), 0] = torch.tensor(np_state)
 
     def plot(self):
         vor = Voronoi(self.tri.points)
@@ -250,13 +270,16 @@ class GraphHexBoard():
 
             return False
 
-        if is_connected(self.player_v, self.tnode_ndx["top"], self.tnode_ndx["bottom"]):
-            return WinState(True, -1)
-        elif is_connected(self.player_h, self.tnode_ndx["left"], self.tnode_ndx["right"]):
-            return WinState(True, 1)
+        if is_connected(VERTICAL_PLAYER, self.tnode_ndx["top"], self.tnode_ndx["bottom"]):
+            return WinState(True, VERTICAL_PLAYER)
+        elif is_connected(HORIZONTAL_PLAYER, self.tnode_ndx["left"], self.tnode_ndx["right"]):
+            return WinState(True, HORIZONTAL_PLAYER)
 
         return WinState(False, None)
 
     @property
     def state_representation(self):
-        return str(self.node_attr[:-4, 0].numpy())
+        # get the playable node states and remove whitespace from string
+        active_state = ''.join(str(self.state_np).split())
+        
+        return active_state

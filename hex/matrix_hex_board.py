@@ -1,6 +1,6 @@
 from collections import namedtuple
 import numpy as np
-import torch
+#import torch
 
 WinState = namedtuple('WinState', ['is_ended', 'winner'])
 
@@ -65,23 +65,23 @@ class MatrixHexBoard():
         """ checks whether player -1 has made a left-right connection or 
         player -1 has made a top-bottom connection by first transposing the board
         """
-        def check_left_right_connect(board_state, player):
+        def check_top_down_connect(board_state, player):
             # add a row of active player stones to the left side
             board_state = np.concatenate((
-                np.ones((board_state.shape[0], 1), dtype=int) * player, 
+                np.ones((1, board_state.shape[0]), dtype=int) * player, 
                 board_state
-            ), axis=1)
+            ), axis=0)
 
-            # see if we can connect the top left stone to the right side
+            # see if we can connect the top left stone to the bottom side
             visited = []
             connected = [(0,0)]
             imax = -1
 
             while connected:
                 stone = connected.pop()
-                imax = max(imax, stone[1])
-                # check whether there is a side to side connection
-                if imax == board_state.shape[1] - 1:
+                imax = max(imax, stone[0])
+                # check whether there is a top to bottom connection
+                if imax == board_state.shape[0] - 1:
                     return True
                 else:
                     for n in self.neighbors(stone, board_state):
@@ -91,11 +91,12 @@ class MatrixHexBoard():
                                 connected.append(n)
                 visited.append(stone)
 
-            return False        
-        
+            return False
+
         board_state = self.np_pieces.copy()
-        for player in [-1, 1]:
-            if check_left_right_connect(board_state, player):
+        # check for vertical win, then horizontal
+        for player in [1, -1]:
+            if check_top_down_connect(board_state, player):
                 return WinState(True, player)
             board_state = np.transpose(board_state)
 
@@ -106,6 +107,14 @@ class MatrixHexBoard():
         if np_pieces is None:
             np_pieces = self.np_pieces
         return self.__class__(self.height, self.width, np_pieces)
+
+    @property 
+    def state_np(self):
+        return self.np_pieces.flatten()
+
+    @state_np.setter
+    def state_np(self, np_state):
+        self.np_pieces = np.copy(np_state.reshape(self.height, self.width))
 
     def __str__(self):
         return str(self.np_pieces)
