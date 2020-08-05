@@ -3,6 +3,9 @@ A minimal implementation of Monte Carlo tree search (MCTS) in Python 3
 Luke Harold Miles, July 2019, Public Domain Dedication
 See also https://en.wikipedia.org/wiki/Monte_Carlo_tree_search
 https://gist.github.com/qpwo/c538c6f73727e254fdc7fab81024f6e1
+
+modified from original to fit with alpha zero general cannonical board where the board is 
+always arranged such that the current player is 1 and the opponent -1
 """
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -64,20 +67,21 @@ class PureMCTS:
 
     def _simulate(self, node):
         "Returns the reward for a random simulation (to completion) of `node`"
-        invert_reward = True
+        invert_reward = False
         while True:
             if node.is_terminal():
                 reward = node.reward()
-                return 1 - reward if invert_reward else reward
+                return -reward if invert_reward else reward
             node = node.find_random_child()
             invert_reward = not invert_reward
-
+        
     def _backpropagate(self, path, reward):
         "Send the reward back up to the ancestors of the leaf"
         for node in reversed(path):
             self.N[node] += 1
             self.Q[node] += reward
-            reward = 1 - reward  # 1 for me is 0 for my enemy, and vice versa
+            # reward is reversed for the parent node
+            reward = -reward
 
     def _uct_select(self, node):
         "Select a child of node, balancing exploration & exploitation"

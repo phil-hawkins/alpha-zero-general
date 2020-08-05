@@ -18,7 +18,7 @@ flags.DEFINE_float('updateThreshold', 0.6, 'During arena playoff, new neural net
 flags.DEFINE_integer('maxlenOfQueue', 200000, 'Number of game examples to train the neural networks')
 flags.DEFINE_integer('numMCTSSims', 500, 'Number of games moves for MCTS to simulate')
 flags.DEFINE_integer('arenaCompare', 40, 'Number of games to play during arena play to determine if new net will be accepted')
-flags.DEFINE_integer('cpuct', 1, 'constant multiplier for predictor + upper confidence (bouund/threshold?) function (modified from PUCB in http://gauss.ececs.uc.edu/Conferences/isaim2010/papers/rosin.pdf)')
+flags.DEFINE_integer('cpuct', 1, 'constant multiplier for predictor + Upper confidence bound for trees (modified from PUCB in http://gauss.ececs.uc.edu/Conferences/isaim2010/papers/rosin.pdf)')
 flags.DEFINE_integer('game_board_size', None, 'overide default size')
 flags.DEFINE_string('nnet', 'base_gat', 'neural net for p,v estimation')
 flags.DEFINE_string('save_prefix', 'base_gat_', 'prefix for best model save file')

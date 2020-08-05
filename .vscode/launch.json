@@ -143,11 +143,11 @@
             "console": "integratedTerminal",
             "redirectOutput": true,
             "args" : [
-                "--game_board_size", "5",
+                "--game_board_size", "3",
                 "--board_type",  "vortex",
                 "--graphic",
                 "--node_nums",
-                "--p1_MCTS_sims", "1",
+                "--p1_MCTS_sims", "2",
                 "--player2", "MCTS",
                 "--p2_MCTS_sims", "100"
             ]

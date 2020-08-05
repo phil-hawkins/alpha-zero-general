@@ -55,12 +55,12 @@ class PureMCTSPlayer():
 
     def reset(self):
         self.tree = PureMCTS()
-        HexNode.base_board = deepcopy(self.game._base_board)
 
     def on_game_end(self):
         self.reset()
 
     def play(self, board, cur_player):
+        HexNode.base_board = deepcopy(board)
         root_node = HexNode.from_hex_board(board)
         for _ in range(self.sims):
             self.tree.do_rollout(root_node)
