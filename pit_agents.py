@@ -117,8 +117,12 @@ def main(_argv):
         on_game_end=on_game_end)
 
     result = config_rec()
-    result["agent1_wins"], result["agent2_wins"], _ = arena.playGames(FLAGS.num_games, verbose=(FLAGS.UI == 'ascii'))
-    print("Results:\n\tA1:{}\n\tA2:{}".format(result["agent1_wins"], result["agent2_wins"]))
+    result["agent1_p1_wins"], result["agent1_p2_wins"], result["agent2_p1_wins"], result["agent2_p2_wins"], _ = arena.playGames(FLAGS.num_games, verbose=(FLAGS.UI == 'ascii'), p_order_results=True)
+    print("Results:\n\tA1:{} ({},{})\n\tA2:{} ({},{})".format(
+        result["agent1_p1_wins"] + result["agent1_p2_wins"],
+        result["agent1_p1_wins"], result["agent1_p2_wins"],
+        result["agent2_p1_wins"] + result["agent2_p2_wins"],
+        result["agent2_p1_wins"], result["agent2_p2_wins"]))
     logging.info("result:" + str(result))
 
 
