@@ -143,7 +143,7 @@
             "console": "integratedTerminal",
             "redirectOutput": true,
             "args" : [
-                "--game_board_size", "3",
+                "--game_board_size", "5",
                 "--board_type",  "vortex",
                 "--graphic",
                 "--node_nums",

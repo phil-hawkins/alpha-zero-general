@@ -54,10 +54,23 @@ class BoardGraph():
         self.node_attr = node_attr
         self.edge_index = edge_index
         self.action_map = action_map
-        self.device = node_attr.device
 
     def __str__(self):
         return "Node Attributes:\n{}\n\nAdjacency Matrix:\n{}\n\nBoard Map: {}\n".format(self.node_attr, self.adjacency_matrix.to_dense(), self.action_map)
+
+    @property
+    def device(self):
+        d = self.node_attr.device
+        assert self.edge_index.device == d
+        assert self.action_map.device == d
+
+        return d
+        
+    @device.setter
+    def device(self, d):
+        self.node_attr = self.node_attr.to(device=d)
+        self.edge_index = self.edge_index.to(device=d)
+        self.action_map = self.action_map.to(device=d)
 
     @classmethod
     def from_graph_board(cls, board):
@@ -332,6 +345,7 @@ def batch_to_net(x, args, device):
     batch = [[], []]
     for bi, board in enumerate(x):
         bg = board_to_graph(board)
+        bg.device = device
         bg.merge_groups()
         for i, player in enumerate([-1, 1]):
             player_graph[i] = PlayerGraph.from_board_graph(bg, player)
