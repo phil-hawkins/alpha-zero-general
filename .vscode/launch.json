@@ -136,20 +136,22 @@
             ]
         },
         {
-            "name": "Vortex Pit 5x5 - net vs MCTS",
+            "name": "Vortex Pit 5x5 - net vs MCTS b",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/pit_hex.py",
+            "program": "${workspaceFolder}/pit_agents.py",
             "console": "integratedTerminal",
             "redirectOutput": true,
             "args" : [
                 "--game_board_size", "5",
                 "--board_type",  "vortex",
-                "--graphic",
+                "--UI", "graphic",
+                "--num_games", "2",
                 "--node_nums",
-                "--p1_MCTS_sims", "2",
-                "--player2", "MCTS",
-                "--p2_MCTS_sims", "100"
+                "--agent1", "MCTSnet",
+                "--agent1_MCTS_sims", "2",
+                "--agent2", "MCTS",
+                "--agent2_MCTS_sims", "100"
             ]
         }
     ]

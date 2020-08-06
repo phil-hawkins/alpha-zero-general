@@ -47,6 +47,23 @@ class HumanHexPlayer():
         return move
 
 
+class PureNNetAgent():
+    def __init__(self, game, model):
+        self.game = game
+        self.model = model
+
+    def play(self, board, cur_player):
+        valid_moves = self.game.getValidMoves(board, 1)
+        pi, _ = self.model.predict(board)
+        # mask invalid moves
+        pi = pi * valid_moves
+        if pi.max() == 0.:
+            RuntimeWarning('No valid moves predicted')
+            return valid_moves.argmax()
+        else:
+            return pi.argmax()
+
+
 class PureMCTSPlayer():
     def __init__(self, game, sims):
         self.game = game
