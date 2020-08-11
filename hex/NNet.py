@@ -1,24 +1,16 @@
 import os
 import sys
-import time
 import math
-
 import numpy as np
-from tqdm import tqdm
-
-sys.path.append('../../')
-from utils import *
-from NeuralNet import NeuralNet
-
 import torch
 import torch.optim as optim
-
-#from .Connect4NNet import Connect4NNet as c4nnet
+from tqdm import tqdm
+sys.path.append('../../')
+from utils import dotdict, AverageMeter
+from NeuralNet import NeuralNet
 from .models.scale_cnn import CNNHex, RecurrentCNNHex
-from .models.graph_net import GraphNet, NativeGraphNet
-from .board_graph import Board, BoardGraph, PlayerGraph, IdentifierEncoder, ZeroIdentifierEncoder, RandomIdentifierEncoder, batch_to_net
-from .matrix_hex_board import MatrixHexBoard
-from .graph_hex_board import GraphHexBoard
+from .models.graph_net import GraphNet
+from .board_graph import IdentifierEncoder, ZeroIdentifierEncoder, RandomIdentifierEncoder, batch_to_net
 
 # args = dotdict({
 #     'dropout': 0.3,
@@ -88,8 +80,8 @@ class NNetWrapper(NeuralNet):
             'action_size': game.getActionSize(),
             'dropout': 0.3,
             'num_channels': 128,
-            'res_blocks' : 5,
-            'in_channels' : 3                   # 0/1/2 - black/white/empty            
+            'res_blocks': 5,
+            'in_channels': 3                   # 0/1/2 - black/white/empty
         })
 
         if self.net_type == "base_cnn":
@@ -110,19 +102,19 @@ class NNetWrapper(NeuralNet):
             base_gat_args(ZeroIdentifierEncoder(d_model=28))
             self.nnet = GraphNet(self.args)
         elif self.net_type == "gat_random_id":
-            random_id_args(RandomIdentifierEncoder(d_model=28))
+            base_gat_args(RandomIdentifierEncoder(d_model=28))
             self.nnet = GraphNet(self.args)
         elif self.net_type == "gat_random_id_1d":
-            random_id_args(RandomIdentifierEncoder(d_model=1))
+            base_gat_args(RandomIdentifierEncoder(d_model=1))
             self.nnet = GraphNet(self.args)
         elif self.net_type == "gat_random_id_10d":
-            random_id_args(RandomIdentifierEncoder(d_model=10))
+            base_gat_args(RandomIdentifierEncoder(d_model=10))
             self.nnet = GraphNet(self.args)
         elif self.net_type == "gat_random_id_20d":
-            random_id_args(RandomIdentifierEncoder(d_model=20))
+            base_gat_args(RandomIdentifierEncoder(d_model=20))
             self.nnet = GraphNet(self.args)
         else:
-            raise Exception("Unknown model type {}".format(nnet))
+            raise Exception("Unknown model type {}".format(net_type))
 
         self.action_size = game.getActionSize()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -157,7 +149,7 @@ class NNetWrapper(NeuralNet):
             t.set_postfix(Loss_pi=pi_losses, Loss_v=v_losses)
 
             return total_loss
-            
+
         # TODO: add support for graph based board representation
         optimizer = optim.Adam(self.nnet.parameters(), lr=self.lr)
         min_loss = math.inf
@@ -182,8 +174,7 @@ class NNetWrapper(NeuralNet):
                 optimizer.zero_grad()
                 total_loss.backward()
                 optimizer.step()
-            
-            
+
             self.nnet.eval()
             pi_losses = AverageMeter()
             v_losses = AverageMeter()
@@ -197,10 +188,10 @@ class NNetWrapper(NeuralNet):
 
             # track best model
             total_loss = pi_losses.avg + v_losses.avg
-            if total_loss < min_loss:             
+            if total_loss < min_loss:
                 print('Best loss so far! Saving checkpoint.')
                 min_loss = total_loss
-                self.save_checkpoint(folder=checkpoint_folder, filename='best.pth.tar')  
+                self.save_checkpoint(folder=checkpoint_folder, filename='best.pth.tar')
 
         self.load_checkpoint(folder=checkpoint_folder, filename='best.pth.tar')
 
@@ -215,7 +206,6 @@ class NNetWrapper(NeuralNet):
         with torch.no_grad():
             pi, v = self.nnet(batch_to_net(board, self.args, self.device))
 
-        #print('PREDICTION TIME TAKEN : {0:03f}'.format(time.time()-start))
         return torch.exp(pi).data.cpu().numpy()[0], v.data.cpu().numpy()[0]
 
     def loss_pi(self, targets, outputs):
@@ -240,6 +230,6 @@ class NNetWrapper(NeuralNet):
         filepath = os.path.join(folder, filename)
         if not os.path.exists(filepath):
             raise Exception("No model in path {}".format(filepath))
-        
+
         checkpoint = torch.load(filepath, map_location=self.device)
         self.nnet.load_state_dict(checkpoint['state_dict'])

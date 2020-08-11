@@ -31,14 +31,14 @@ flags.DEFINE_string('examples_file', None, 'load examples from file')
 flags.DEFINE_integer('start_iteration', 1, 'Iteration to start training at')
 
 
-
 log = logging.getLogger(__name__)
 coloredlogs.install(level='INFO')  # Change this to DEBUG to see more info.
+
 
 def main(_argv):
     args = dotdict({
         'numIters': FLAGS.numIters,
-        'numEps': FLAGS.numEps,             
+        'numEps': FLAGS.numEps,
         'tempThreshold': FLAGS.tempThreshold,
         'updateThreshold': FLAGS.updateThreshold,
         'maxlenOfQueue': FLAGS.maxlenOfQueue,
@@ -47,10 +47,10 @@ def main(_argv):
         'cpuct': FLAGS.cpuct,
 
         'checkpoint': FLAGS.load_folder,
-        'save_prefix' : FLAGS.save_prefix,
+        'save_prefix': FLAGS.save_prefix,
         'load_model': FLAGS.load_model,
         'load_folder_file': (FLAGS.load_folder, FLAGS.load_file),
-        'examples_file' : FLAGS.examples_file,
+        'examples_file': FLAGS.examples_file,
         'numItersForTrainExamplesHistory': FLAGS.numItersForTrainExamplesHistory,
 
         'start_iteration': FLAGS.start_iteration

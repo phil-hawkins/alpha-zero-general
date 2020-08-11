@@ -1,4 +1,3 @@
-import numpy as np
 import os.path
 from pickle import Unpickler
 from random import shuffle
@@ -6,10 +5,7 @@ from absl import app, flags, logging
 from absl.flags import FLAGS
 
 from hex.matrix_hex_game import MatrixHexGame
-from hex.graph_hex_game import GraphHexGame
-from hex.graph_hex_board import GraphHexBoard
 from hex.NNet import NNetWrapper as NNet
-from utils import dotdict, config_rec
 
 """
 Pretrains a new network using an examle file from self-play
@@ -57,6 +53,7 @@ def main(_argv):
         nnw.train(train_examples, FLAGS.pretrain_dir)
         logging.info('Saving best checkpoint to: {}'.format(checkpoint_file))
         nnw.save_checkpoint(folder=FLAGS.pretrain_dir, filename=checkpoint_file)
+
 
 if __name__ == '__main__':
     app.run(main)

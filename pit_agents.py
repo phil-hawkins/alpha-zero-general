@@ -31,7 +31,7 @@ flags.DEFINE_enum('agent2', 'NN',
     'MCTSnet: alpha zero style MCTS + neural network, '
     'human: interactive UI for human player. Only one human player allowed, '
     'MCTS: pure Monty Carlo Tree Search agent with full rollouts and not neural network')
-flags.DEFINE_enum('UI', 'no_UI', 
+flags.DEFINE_enum('UI', 'no_UI',
     ['ascii', 'graphic', 'no_UI'],
     'Must be ascii or no_UI for Hex and graphic or no_UI for Vortex')
 flags.DEFINE_integer('num_games', 2, 'Number of games to play')
