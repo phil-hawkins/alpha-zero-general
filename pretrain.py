@@ -24,11 +24,19 @@ flags.DEFINE_string('checkpoint_file', None, 'pretrained weights save path')
 flags.DEFINE_string('nnet', 'base_gat', 'type of neural net to pre-train for p,v estimation')
 flags.DEFINE_string('example_file', 'hex6x6.pth.tar.examples', 'path to example file to use in pre-training')
 flags.DEFINE_integer('game_board_size', 6, 'overide default size')
+flags.DEFINE_float('learning_rate', 1e-4, 'network learning rate')
+flags.DEFINE_integer('batch_size', 64, 'network training batch size')
+flags.DEFINE_integer('epochs', 10, 'Number of training epochs to run')
+flags.DEFINE_boolean('cont', False, 'load checkpoint and continue training')
 
 
 def main(_argv):
     g = MatrixHexGame(FLAGS.game_board_size, FLAGS.game_board_size)
-    nnw = NNet(g, net_type=FLAGS.nnet)
+    nnw = NNet(g, net_type=FLAGS.nnet, lr=FLAGS.learning_rate, batch_size=FLAGS.batch_size, epochs=FLAGS.epochs)
+    checkpoint_file = (FLAGS.nnet + '.chk') if FLAGS.checkpoint_file is None else FLAGS.checkpoint_file
+    if FLAGS.cont:
+        logging.info('Continuing from checkpoint file: {}'.format(checkpoint_file))
+        nnw.load_checkpoint(folder=FLAGS.pretrain_dir, filename=checkpoint_file)
     example_file = os.path.join(FLAGS.pretrain_dir, FLAGS.example_file)
 
     if not os.path.isfile(example_file):
@@ -47,8 +55,7 @@ def main(_argv):
 
         logging.info('Training:')
         nnw.train(train_examples, FLAGS.pretrain_dir)
-        checkpoint_file = (FLAGS.nnet + '.chk') if FLAGS.checkpoint_file is None else FLAGS.checkpoint_file
-        logging.info('Saving best checkpoint to : {}'.format(checkpoint_file))
+        logging.info('Saving best checkpoint to: {}'.format(checkpoint_file))
         nnw.save_checkpoint(folder=FLAGS.pretrain_dir, filename=checkpoint_file)
 
 if __name__ == '__main__':

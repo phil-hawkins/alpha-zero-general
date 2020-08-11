@@ -20,14 +20,12 @@ from .board_graph import Board, BoardGraph, PlayerGraph, IdentifierEncoder, Zero
 from .matrix_hex_board import MatrixHexBoard
 from .graph_hex_board import GraphHexBoard
 
-args = dotdict({
-    'dropout': 0.3,
-    'epochs': 10,
-    'batch_size': 64,
-    'num_channels': 128,#32,
-    'res_blocks' : 5,
-    'in_channels' : 3                   # 0/1/2 - black/white/empty
-})
+# args = dotdict({
+#     'dropout': 0.3,
+#     'num_channels': 128,#32,
+#     'res_blocks' : 5,
+#     'in_channels' : 3                   # 0/1/2 - black/white/empty
+# })
 
 
 # class FakeNNet(NeuralNet):
@@ -73,53 +71,56 @@ args = dotdict({
 #     return v
 
 class NNetWrapper(NeuralNet):
-    def __init__(self, game, net_type="base_gat"):
-        def random_id_args(d_model):
-            args['num_channels'] = 32
-            args['expand_base'] = 2
-            args['attn_heads'] = 1
-            args['readout_attn_heads'] = 4
-            args['id_encoder'] = RandomIdentifierEncoder(d_model=d_model)
+    def __init__(self, game, net_type="base_gat", lr=1e-3, epochs=10, batch_size=64):
 
-        def base_gat_args():
-            args['num_channels'] = 32
-            args['expand_base'] = 2
-            args['attn_heads'] = 1
-            args['readout_attn_heads'] = 4
-            args['id_encoder'] = IdentifierEncoder(d_model=28, max_seq_len=500)
+        def base_gat_args(id_encoder):
+            self.args['num_channels'] = 32
+            self.args['expand_base'] = 2
+            self.args['attn_heads'] = 1
+            self.args['readout_attn_heads'] = 4
+            self.args['id_encoder'] = id_encoder
 
         self.net_type = net_type
-        args['action_size'] = game.getActionSize()
+        self.lr = lr
+        self.epochs = epochs
+        self.batch_size = batch_size
+        self.args = dotdict({
+            'action_size': game.getActionSize(),
+            'dropout': 0.3,
+            'num_channels': 128,
+            'res_blocks' : 5,
+            'in_channels' : 3                   # 0/1/2 - black/white/empty            
+        })
+
         if self.net_type == "base_cnn":
-            self.nnet = CNNHex.base_cnn(game, args)
+            self.nnet = CNNHex.base_cnn(game, self.args)
         elif self.net_type == "scalefree_base_cnn":
-            self.nnet = CNNHex.base_cnn(game, args)
+            self.nnet = CNNHex.base_cnn(game, self.args)
         elif self.net_type == "recurrent_cnn":
-            args.res_blocks = 2
-            self.nnet = RecurrentCNNHex.recurrent_cnn(game, args)
+            self.args.res_blocks = 2
+            self.nnet = RecurrentCNNHex.recurrent_cnn(game, self.args)
         elif self.net_type == "base_gat":
-            base_gat_args()
-            self.nnet = GraphNet(args)
+            base_gat_args(IdentifierEncoder(d_model=28, max_seq_len=500))
+            self.nnet = GraphNet(self.args)
         elif self.net_type == "gat_res10":
-            base_gat_args()
-            args['res_blocks'] = 10
-            self.nnet = GraphNet(args)
+            base_gat_args(IdentifierEncoder(d_model=28, max_seq_len=500))
+            self.args['res_blocks'] = 10
+            self.nnet = GraphNet(self.args)
         elif self.net_type == "gat_zero_id":
-            base_gat_args()
-            args['id_encoder'] = ZeroIdentifierEncoder(d_model=28)
-            self.nnet = GraphNet(args)
+            base_gat_args(ZeroIdentifierEncoder(d_model=28))
+            self.nnet = GraphNet(self.args)
         elif self.net_type == "gat_random_id":
-            random_id_args(28)
-            self.nnet = GraphNet(args)
+            random_id_args(RandomIdentifierEncoder(d_model=28))
+            self.nnet = GraphNet(self.args)
         elif self.net_type == "gat_random_id_1d":
-            random_id_args(1)
-            self.nnet = GraphNet(args)
+            random_id_args(RandomIdentifierEncoder(d_model=1))
+            self.nnet = GraphNet(self.args)
         elif self.net_type == "gat_random_id_10d":
-            random_id_args(10)
-            self.nnet = GraphNet(args)
+            random_id_args(RandomIdentifierEncoder(d_model=10))
+            self.nnet = GraphNet(self.args)
         elif self.net_type == "gat_random_id_20d":
-            random_id_args(20)
-            self.nnet = GraphNet(args)
+            random_id_args(RandomIdentifierEncoder(d_model=20))
+            self.nnet = GraphNet(self.args)
         else:
             raise Exception("Unknown model type {}".format(nnet))
 
@@ -134,51 +135,72 @@ class NNetWrapper(NeuralNet):
 
         def prep(t):
             return t.contiguous().to(device=self.device)
+
+        def step(batch_start, batch_end):
+            boards, pis, vs = list(zip(*examples[batch_start:batch_end]))
+
+            boards = torch.FloatTensor(np.array(boards).astype(np.float64))
+            target_pis = torch.FloatTensor(np.array(pis))
+            target_vs = torch.FloatTensor(np.array(vs).astype(np.float64))
+
+            boards, target_pis, target_vs = prep(boards), prep(target_pis), prep(target_vs)
+
+            # compute output
+            out_pi, out_v = self.nnet(batch_to_net(boards, self.args, self.device))
+            l_pi = self.loss_pi(target_pis, out_pi)
+            l_v = self.loss_v(target_vs, out_v)
+            total_loss = l_pi + l_v
+
+            # record loss
+            pi_losses.update(l_pi.item(), boards.size(0))
+            v_losses.update(l_v.item(), boards.size(0))
+            t.set_postfix(Loss_pi=pi_losses, Loss_v=v_losses)
+
+            return total_loss
             
         # TODO: add support for graph based board representation
-        optimizer = optim.Adam(self.nnet.parameters())
+        optimizer = optim.Adam(self.nnet.parameters(), lr=self.lr)
         min_loss = math.inf
 
-        for epoch in range(args.epochs):
+        for epoch in range(self.epochs):
             print('EPOCH ::: ' + str(epoch + 1))
             self.nnet.train()
             pi_losses = AverageMeter()
             v_losses = AverageMeter()
 
-            batch_count = int(len(examples) / args.batch_size)
+            batch_count = int(len(examples) / self.batch_size)
+            train_batch_count = int(batch_count * .9)
+            val_batch_count = batch_count - train_batch_count
 
-            t = tqdm(range(batch_count), desc='Training Net')
-            for _ in t:
-                sample_ids = np.random.randint(len(examples), size=args.batch_size)
-                # TODO: pad the example boards to the same size as the current training boardto give a consistent tensor size
-                # not actions will be different on different board sizes
-                boards, pis, vs = list(zip(*[examples[i] for i in sample_ids]))
-                boards = torch.FloatTensor(np.array(boards).astype(np.float64))
-                target_pis = torch.FloatTensor(np.array(pis))
-                target_vs = torch.FloatTensor(np.array(vs).astype(np.float64))
-
-                boards, target_pis, target_vs = prep(boards), prep(target_pis), prep(target_vs)
-
-                # compute output
-                out_pi, out_v = self.nnet(batch_to_net(boards, args, self.device))
-                l_pi = self.loss_pi(target_pis, out_pi)
-                l_v = self.loss_v(target_vs, out_v)
-                total_loss = l_pi + l_v
-
-                # track best model
-                if total_loss < min_loss:
-                    min_loss = total_loss
-                    self.save_checkpoint(folder=checkpoint_folder, filename='best.pth.tar')
-
-                # record loss
-                pi_losses.update(l_pi.item(), boards.size(0))
-                v_losses.update(l_v.item(), boards.size(0))
-                t.set_postfix(Loss_pi=pi_losses, Loss_v=v_losses)
+            t = tqdm(range(train_batch_count), desc='Training Net')
+            for i in t:
+                batch_start = i * self.batch_size
+                batch_end = batch_start + self.batch_size
+                total_loss = step(batch_start, batch_end)
 
                 # compute gradient and do SGD step
                 optimizer.zero_grad()
                 total_loss.backward()
                 optimizer.step()
+            
+            
+            self.nnet.eval()
+            pi_losses = AverageMeter()
+            v_losses = AverageMeter()
+
+            with torch.no_grad():
+                t = tqdm(range(val_batch_count), desc='Validating Net')
+                for i in t:
+                    batch_start = (train_batch_count + i) * self.batch_size
+                    batch_end = batch_start + self.batch_size
+                    step(batch_start, batch_end)
+
+            # track best model
+            total_loss = pi_losses.avg + v_losses.avg
+            if total_loss < min_loss:             
+                print('Best loss so far! Saving checkpoint.')
+                min_loss = total_loss
+                self.save_checkpoint(folder=checkpoint_folder, filename='best.pth.tar')  
 
         self.load_checkpoint(folder=checkpoint_folder, filename='best.pth.tar')
 
@@ -191,7 +213,7 @@ class NNetWrapper(NeuralNet):
 
         self.nnet.eval()
         with torch.no_grad():
-            pi, v = self.nnet(batch_to_net(board, args, self.device))
+            pi, v = self.nnet(batch_to_net(board, self.args, self.device))
 
         #print('PREDICTION TIME TAKEN : {0:03f}'.format(time.time()-start))
         return torch.exp(pi).data.cpu().numpy()[0], v.data.cpu().numpy()[0]
