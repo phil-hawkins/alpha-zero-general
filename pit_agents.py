@@ -7,8 +7,8 @@ from MCTS import MCTS
 from hex.matrix_hex_game import MatrixHexGame
 from hex.graph_hex_game import GraphHexGame
 from hex.graph_hex_board import GraphHexBoard
-from hex.NNet import NNetWrapper as NNet, FakeNNet, value_from_shortest_path
-from hex.hex_players import RandomPlayer, HumanHexPlayer, UIPlayer, PureMCTSPlayer, GPureMCTSPlayer, PureNNetAgent
+from hex.NNet import NNetWrapper as NNet
+from hex.hex_players import HumanHexPlayer, UIPlayer, PureMCTSPlayer, GPureMCTSPlayer, PureNNetAgent
 from utils import dotdict, config_rec
 
 """
