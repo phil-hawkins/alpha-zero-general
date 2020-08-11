@@ -14,3 +14,5 @@ checkpoints/
 pretrained_models/**
 .vscode/settings.json
 results/data/**
+
+temp/**

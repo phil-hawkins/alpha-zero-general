@@ -49,7 +49,7 @@ def main(_argv):
         nnw.train(train_examples, FLAGS.pretrain_dir)
         checkpoint_file = (FLAGS.nnet + '.chk') if FLAGS.checkpoint_file is None else FLAGS.checkpoint_file
         logging.info('Saving best checkpoint to : {}'.format(checkpoint_file))
-        nnw.save_checkpoint(folder=FLAGS.pretrain_dir, filename=FLAGS.checkpoint_file)
+        nnw.save_checkpoint(folder=FLAGS.pretrain_dir, filename=checkpoint_file)
 
 if __name__ == '__main__':
     app.run(main)
