@@ -30,47 +30,47 @@ args = dotdict({
 })
 
 
-class FakeNNet(NeuralNet):
-    """ fake neural network that does random predictions for pitting an oponent against pure MCTS
-    """
-    def __init__(self, game, net_type=None, value_function=None):
-        self.game = game
-        self.value_function = value_function if value_function else lambda x : 0.
+# class FakeNNet(NeuralNet):
+#     """ fake neural network that does random predictions for pitting an oponent against pure MCTS
+#     """
+#     def __init__(self, game, net_type=None, value_function=None):
+#         self.game = game
+#         self.value_function = value_function if value_function else lambda x : 0.
 
-    def predict(self, board):
-        valids = self.game.getValidMoves(board)
-        pi = np.zeros_like(valids, dtype=np.float32)
-        valids_ndx = np.nonzero(valids)[0]
-        np.random.shuffle(valids_ndx)
-        action_ndx = valids_ndx[0]
-        pi[action_ndx] = 1.0
-        v = self.value_function(board)
+#     def predict(self, board):
+#         valids = self.game.getValidMoves(board)
+#         pi = np.zeros_like(valids, dtype=np.float32)
+#         valids_ndx = np.nonzero(valids)[0]
+#         np.random.shuffle(valids_ndx)
+#         action_ndx = valids_ndx[0]
+#         pi[action_ndx] = 1.0
+#         v = self.value_function(board)
 
-        return pi, v
+#         return pi, v
 
 
-def value_from_shortest_path(board):
-    """ takes either a matrix representation of the board or a graph representation
-    and calculates a state value based on a comparison of shortest paths of each player
-    """
-    if type(board).__module__ == np.__name__:
-        bg = BoardGraph.from_matrix_board(MatrixHexBoard(torch.tensor(board)))
-    elif isinstance(board, GraphHexBoard):
-        bg = BoardGraph.from_graph_board(board)
-    else:
-        raise Exception("Unsupported board type")
+# def value_from_shortest_path(board):
+#     """ takes either a matrix representation of the board or a graph representation
+#     and calculates a state value based on a comparison of shortest paths of each player
+#     """
+#     if type(board).__module__ == np.__name__:
+#         bg = BoardGraph.from_matrix_board(MatrixHexBoard(torch.tensor(board)))
+#     elif isinstance(board, GraphHexBoard):
+#         bg = BoardGraph.from_graph_board(board)
+#     else:
+#         raise Exception("Unsupported board type")
 
-    g_p1, g_p2 = PlayerGraph.from_board_graph(bg, 1), PlayerGraph.from_board_graph(bg, -1)
-    sp_p1, sp_p2 = g_p1.shortest_path(), g_p2.shortest_path()
+#     g_p1, g_p2 = PlayerGraph.from_board_graph(bg, 1), PlayerGraph.from_board_graph(bg, -1)
+#     sp_p1, sp_p2 = g_p1.shortest_path(), g_p2.shortest_path()
 
-    if sp_p1 == 0:
-        v = 1.0
-    elif sp_p2 == 0:
-        v = -1.0
-    else:
-        v = (sp_p2 - sp_p1) / max(sp_p1, sp_p2)
+#     if sp_p1 == 0:
+#         v = 1.0
+#     elif sp_p2 == 0:
+#         v = -1.0
+#     else:
+#         v = (sp_p2 - sp_p1) / max(sp_p1, sp_p2)
 
-    return v
+#     return v
 
 class NNetWrapper(NeuralNet):
     def __init__(self, game, net_type="base_gat"):
@@ -80,6 +80,13 @@ class NNetWrapper(NeuralNet):
             args['attn_heads'] = 1
             args['readout_attn_heads'] = 4
             args['id_encoder'] = RandomIdentifierEncoder(d_model=d_model)
+
+        def base_gat_args():
+            args['num_channels'] = 32
+            args['expand_base'] = 2
+            args['attn_heads'] = 1
+            args['readout_attn_heads'] = 4
+            args['id_encoder'] = IdentifierEncoder(d_model=28, max_seq_len=500)
 
         self.net_type = net_type
         args['action_size'] = game.getActionSize()
@@ -91,17 +98,14 @@ class NNetWrapper(NeuralNet):
             args.res_blocks = 2
             self.nnet = RecurrentCNNHex.recurrent_cnn(game, args)
         elif self.net_type == "base_gat":
-            args['num_channels'] = 32
-            args['expand_base'] = 2
-            args['attn_heads'] = 1
-            args['readout_attn_heads'] = 4
-            args['id_encoder'] = IdentifierEncoder(d_model=28, max_seq_len=500)
+            base_gat_args()
+            self.nnet = GraphNet(args)
+        elif self.net_type == "gat_res10":
+            base_gat_args()
+            args['res_blocks'] = 10
             self.nnet = GraphNet(args)
         elif self.net_type == "gat_zero_id":
-            args['num_channels'] = 32
-            args['expand_base'] = 2
-            args['attn_heads'] = 1
-            args['readout_attn_heads'] = 4
+            base_gat_args()
             args['id_encoder'] = ZeroIdentifierEncoder(d_model=28)
             self.nnet = GraphNet(args)
         elif self.net_type == "gat_random_id":
@@ -203,8 +207,8 @@ class NNetWrapper(NeuralNet):
         if not os.path.exists(folder):
             print("Checkpoint Directory does not exist! Making directory {}".format(folder))
             os.mkdir(folder)
-        else:
-            print("Checkpoint Directory exists! ")
+        # else:
+        #     print("Checkpoint Directory exists! ")
         torch.save({
             'state_dict': self.nnet.state_dict(),
         }, filepath)

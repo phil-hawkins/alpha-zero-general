@@ -325,7 +325,8 @@ def batch_to_net(x, args, device):
     """ 
     # marshall the input into a batch tensor or a list of graph objects
     if type(x).__module__ == np.__name__ or isinstance(x, torch.Tensor):
-        x = torch.FloatTensor(x.astype(np.float64)).to(device)
+        if not isinstance(x, torch.Tensor):
+            x = torch.FloatTensor(x.astype(np.float64)).to(device)
         if len(x.shape) == 2:           
             x = x.unsqueeze(dim=0)
         
