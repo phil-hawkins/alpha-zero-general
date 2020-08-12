@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import torch.optim as optim
 from tqdm import tqdm
+from absl import logging
 sys.path.append('../../')
 from utils import dotdict, AverageMeter
 from NeuralNet import NeuralNet
@@ -98,6 +99,10 @@ class NNetWrapper(NeuralNet):
             base_gat_args(IdentifierEncoder(d_model=28, max_seq_len=500))
             self.args['res_blocks'] = 10
             self.nnet = GraphNet(self.args)
+        elif self.net_type == "gat_ch128":
+            base_gat_args(IdentifierEncoder(d_model=124, max_seq_len=500))
+            self.args['num_channels'] = 128
+            self.nnet = GraphNet(self.args)
         elif self.net_type == "gat_zero_id":
             base_gat_args(ZeroIdentifierEncoder(d_model=28))
             self.nnet = GraphNet(self.args)
@@ -120,7 +125,7 @@ class NNetWrapper(NeuralNet):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.nnet.to(device=self.device)
 
-    def train(self, examples, checkpoint_folder="checkpoint"):
+    def train(self, examples, checkpoint_folder="checkpoint", summary_writer=None):
         """
         examples: list of examples, each example is of form (board, pi, v)
         """
@@ -155,7 +160,7 @@ class NNetWrapper(NeuralNet):
         min_loss = math.inf
 
         for epoch in range(self.epochs):
-            print('EPOCH ::: ' + str(epoch + 1))
+            logging.info('EPOCH ::: {}'.format(epoch + 1))
             self.nnet.train()
             pi_losses = AverageMeter()
             v_losses = AverageMeter()
@@ -175,6 +180,12 @@ class NNetWrapper(NeuralNet):
                 total_loss.backward()
                 optimizer.step()
 
+            if summary_writer is not None:
+                writer.add_scalar("loss_pi", pi_losses, global_step=epoch)
+                writer.add_scalar("loss_v", v_losses, global_step=epoch)
+                writer.add_scalar("loss", v_losses+pi_losses, global_step=epoch)
+                writer.flush()
+
             self.nnet.eval()
             pi_losses = AverageMeter()
             v_losses = AverageMeter()
@@ -186,10 +197,16 @@ class NNetWrapper(NeuralNet):
                     batch_end = batch_start + self.batch_size
                     step(batch_start, batch_end)
 
+            if summary_writer is not None:
+                writer.add_scalar("val_loss_pi", pi_losses, global_step=epoch)
+                writer.add_scalar("val_loss_v", v_losses, global_step=epoch)
+                writer.add_scalar("val_loss", v_losses+pi_losses, global_step=epoch)
+                writer.flush()
+
             # track best model
             total_loss = pi_losses.avg + v_losses.avg
             if total_loss < min_loss:
-                print('Best loss so far! Saving checkpoint.')
+                logging.info('Best loss so far! Saving checkpoint.')
                 min_loss = total_loss
                 self.save_checkpoint(folder=checkpoint_folder, filename='best.pth.tar')
 

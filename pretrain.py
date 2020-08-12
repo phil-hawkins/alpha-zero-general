@@ -3,9 +3,11 @@ from pickle import Unpickler
 from random import shuffle
 from absl import app, flags, logging
 from absl.flags import FLAGS
+from torch.utils.tensorboard import SummaryWriter
 
 from hex.matrix_hex_game import MatrixHexGame
 from hex.NNet import NNetWrapper as NNet
+from utils import config_rec
 
 """
 Pretrains a new network using an examle file from self-play
@@ -16,6 +18,7 @@ flags.DEFINE_enum('board_type', 'hex',
     'hex: standard hex grid Hex board, '
     'vortex: random grap board played on a Voronoi diagram (not implemented yet!!!)')
 flags.DEFINE_string('pretrain_dir', 'temp/pretrain', 'pretrained weights save path')
+flags.DEFINE_string('summary_dir', 'temp/pretrain/logs', 'logs for pretraining')
 flags.DEFINE_string('checkpoint_file', None, 'pretrained weights save path')
 flags.DEFINE_string('nnet', 'base_gat', 'type of neural net to pre-train for p,v estimation')
 flags.DEFINE_string('example_file', 'hex6x6.pth.tar.examples', 'path to example file to use in pre-training')
@@ -27,6 +30,8 @@ flags.DEFINE_boolean('cont', False, 'load checkpoint and continue training')
 
 
 def main(_argv):
+    writer = SummaryWriter(log_dir=FLAGS.summary_dir)
+    writer.add_text(tag="Config", text_string=str(config_rec()))
     g = MatrixHexGame(FLAGS.game_board_size, FLAGS.game_board_size)
     nnw = NNet(g, net_type=FLAGS.nnet, lr=FLAGS.learning_rate, batch_size=FLAGS.batch_size, epochs=FLAGS.epochs)
     checkpoint_file = (FLAGS.nnet + '.chk') if FLAGS.checkpoint_file is None else FLAGS.checkpoint_file
@@ -50,10 +55,11 @@ def main(_argv):
         shuffle(train_examples)
 
         logging.info('Training:')
-        nnw.train(train_examples, FLAGS.pretrain_dir)
+        nnw.train(train_examples, checkpoint_folder=FLAGS.pretrain_dir, summary_writer=writer)
         logging.info('Saving best checkpoint to: {}'.format(checkpoint_file))
         nnw.save_checkpoint(folder=FLAGS.pretrain_dir, filename=checkpoint_file)
 
+    writer.close()
 
 if __name__ == '__main__':
     app.run(main)
