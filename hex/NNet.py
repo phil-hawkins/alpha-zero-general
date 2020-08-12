@@ -197,7 +197,7 @@ class NNetWrapper(NeuralNet):
                     batch_end = batch_start + self.batch_size
                     step(batch_start, batch_end)
 
-            if summary_writer is not None:
+            if summary_writers is not None:
                 summary_writers['val'].add_scalar("pi/loss", pi_losses.avg, global_step=epoch)
                 summary_writers['val'].add_scalar("v/loss", v_losses.avg, global_step=epoch)
                 summary_writers['val'].add_scalar("all/loss", v_losses.avg + pi_losses.avg, global_step=epoch)
