@@ -181,10 +181,10 @@ class NNetWrapper(NeuralNet):
                 optimizer.step()
 
             if summary_writer is not None:
-                writer.add_scalar("loss_pi", pi_losses, global_step=epoch)
-                writer.add_scalar("loss_v", v_losses, global_step=epoch)
-                writer.add_scalar("loss", v_losses+pi_losses, global_step=epoch)
-                writer.flush()
+                summary_writer.add_scalar("loss_pi/train", pi_losses, global_step=epoch)
+                summary_writer.add_scalar("loss_v"/train, v_losses, global_step=epoch)
+                summary_writer.add_scalar("loss/train", v_losses+pi_losses, global_step=epoch)
+                summary_writer.flush()
 
             self.nnet.eval()
             pi_losses = AverageMeter()
@@ -198,10 +198,10 @@ class NNetWrapper(NeuralNet):
                     step(batch_start, batch_end)
 
             if summary_writer is not None:
-                writer.add_scalar("val_loss_pi", pi_losses, global_step=epoch)
-                writer.add_scalar("val_loss_v", v_losses, global_step=epoch)
-                writer.add_scalar("val_loss", v_losses+pi_losses, global_step=epoch)
-                writer.flush()
+                summary_writer.add_scalar("loss_pi/validation", pi_losses, global_step=epoch)
+                summary_writer.add_scalar("loss_v/validation", v_losses, global_step=epoch)
+                summary_writer.add_scalar("loss/validation", v_losses+pi_losses, global_step=epoch)
+                summary_writer.flush()
 
             # track best model
             total_loss = pi_losses.avg + v_losses.avg
