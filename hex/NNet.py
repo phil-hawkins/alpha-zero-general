@@ -182,7 +182,7 @@ class NNetWrapper(NeuralNet):
 
             if summary_writer is not None:
                 summary_writer.add_scalar("loss_pi/train", pi_losses.avg, global_step=epoch)
-                summary_writer.add_scalar("loss_v"/train, v_losses.avg, global_step=epoch)
+                summary_writer.add_scalar("loss_v/train", v_losses.avg, global_step=epoch)
                 summary_writer.add_scalar("loss/train", v_losses.avg + pi_losses.avg, global_step=epoch)
                 summary_writer.flush()
 
