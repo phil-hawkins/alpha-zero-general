@@ -125,7 +125,7 @@ class NNetWrapper(NeuralNet):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.nnet.to(device=self.device)
 
-    def train(self, examples, checkpoint_folder="checkpoint", summary_writer=None):
+    def train(self, examples, checkpoint_folder="checkpoint", summary_writers=None):
         """
         examples: list of examples, each example is of form (board, pi, v)
         """
@@ -180,11 +180,11 @@ class NNetWrapper(NeuralNet):
                 total_loss.backward()
                 optimizer.step()
 
-            if summary_writer is not None:
-                summary_writer.add_scalar("loss_pi/train", pi_losses.avg, global_step=epoch)
-                summary_writer.add_scalar("loss_v/train", v_losses.avg, global_step=epoch)
-                summary_writer.add_scalar("loss/train", v_losses.avg + pi_losses.avg, global_step=epoch)
-                summary_writer.flush()
+            if summary_writers is not None:
+                summary_writers['train'].add_scalar("pi/loss", pi_losses.avg, global_step=epoch)
+                summary_writers['train'].add_scalar("v/loss", v_losses.avg, global_step=epoch)
+                summary_writers['train'].add_scalar("all/loss", v_losses.avg + pi_losses.avg, global_step=epoch)
+                summary_writers['train'].flush()
 
             self.nnet.eval()
             pi_losses = AverageMeter()
@@ -198,10 +198,10 @@ class NNetWrapper(NeuralNet):
                     step(batch_start, batch_end)
 
             if summary_writer is not None:
-                summary_writer.add_scalar("loss_pi/validation", pi_losses.avg, global_step=epoch)
-                summary_writer.add_scalar("loss_v/validation", v_losses.avg, global_step=epoch)
-                summary_writer.add_scalar("loss/validation", v_losses.avg + pi_losses.avg, global_step=epoch)
-                summary_writer.flush()
+                summary_writers['val'].add_scalar("pi/loss", pi_losses.avg, global_step=epoch)
+                summary_writers['val'].add_scalar("v/loss", v_losses.avg, global_step=epoch)
+                summary_writers['val'].add_scalar("all/loss", v_losses.avg + pi_losses.avg, global_step=epoch)
+                summary_writers['val'].flush()
 
             # track best model
             total_loss = pi_losses.avg + v_losses.avg

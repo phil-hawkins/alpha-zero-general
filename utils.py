@@ -62,7 +62,7 @@ def config_rec():
         'graphic',
         'node_nums'
     ]
-    crec = {flag:FLAGS[flag].value for flag in FLAGS if flag not in ignore_flags}
+    crec = {flag: FLAGS[flag].value for flag in FLAGS if flag not in ignore_flags}
     crec["git_record"] = git_record()
     
     return crec

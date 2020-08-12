@@ -4,6 +4,7 @@ from random import shuffle
 from absl import app, flags, logging
 from absl.flags import FLAGS
 from torch.utils.tensorboard import SummaryWriter
+import json
 
 from hex.matrix_hex_game import MatrixHexGame
 from hex.NNet import NNetWrapper as NNet
@@ -27,11 +28,16 @@ flags.DEFINE_float('learning_rate', 1e-4, 'network learning rate')
 flags.DEFINE_integer('batch_size', 64, 'network training batch size')
 flags.DEFINE_integer('epochs', 10, 'Number of training epochs to run')
 flags.DEFINE_boolean('cont', False, 'load checkpoint and continue training')
+flags.DEFINE_string('job_id', 'testrun', 'job identifier from the batch system.  Used in tagging the logs')
 
 
 def main(_argv):
-    writer = SummaryWriter(log_dir=FLAGS.summary_dir)
-    writer.add_text(tag="Config", text_string=str(config_rec()))
+    sdir = os.path.join(FLAGS.summary_dir, FLAGS.nnet, FLAGS.job_id)
+    writers = {
+        'train': SummaryWriter(log_dir=os.path.join(sdir, 'train')),
+        'val': SummaryWriter(log_dir=os.path.join(sdir, 'validation'))
+    }
+    writers['train'].add_text(tag="Config", text_string=json.dumps(config_rec(), indent=4, sort_keys=True))
     g = MatrixHexGame(FLAGS.game_board_size, FLAGS.game_board_size)
     nnw = NNet(g, net_type=FLAGS.nnet, lr=FLAGS.learning_rate, batch_size=FLAGS.batch_size, epochs=FLAGS.epochs)
     checkpoint_file = (FLAGS.nnet + '.chk') if FLAGS.checkpoint_file is None else FLAGS.checkpoint_file
@@ -55,11 +61,12 @@ def main(_argv):
         shuffle(train_examples)
 
         logging.info('Training:')
-        nnw.train(train_examples, checkpoint_folder=FLAGS.pretrain_dir, summary_writer=writer)
+        nnw.train(train_examples, checkpoint_folder=FLAGS.pretrain_dir, summary_writers=writers)
         logging.info('Saving best checkpoint to: {}'.format(checkpoint_file))
         nnw.save_checkpoint(folder=FLAGS.pretrain_dir, filename=checkpoint_file)
 
-    writer.close()
+    writers['train'].close()
+    writers['val'].close()
 
 if __name__ == '__main__':
     app.run(main)
