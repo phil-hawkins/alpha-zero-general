@@ -210,9 +210,9 @@ class NNetWrapper(NeuralNet):
             if total_loss < min_loss:
                 logging.info('Best loss so far! Saving checkpoint.')
                 min_loss = total_loss
-                self.save_checkpoint(folder=checkpoint_folder, filename='best.pth.tar')
+                self.save_checkpoint(folder=checkpoint_folder, filename=self.net_type+'_best.pth.tar')
 
-        self.load_checkpoint(folder=checkpoint_folder, filename='best.pth.tar')
+        self.load_checkpoint(folder=checkpoint_folder, filename=self.net_type+'_best.pth.tar')
 
     def predict(self, board):
         """
