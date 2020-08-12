@@ -181,9 +181,9 @@ class NNetWrapper(NeuralNet):
                 optimizer.step()
 
             if summary_writers is not None:
-                summary_writers['train'].add_scalar("pi/loss", pi_losses.avg, global_step=epoch)
-                summary_writers['train'].add_scalar("v/loss", v_losses.avg, global_step=epoch)
-                summary_writers['train'].add_scalar("all/loss", v_losses.avg + pi_losses.avg, global_step=epoch)
+                summary_writers['train'].add_scalar("loss/policy", pi_losses.avg, global_step=epoch)
+                summary_writers['train'].add_scalar("loss/value", v_losses.avg, global_step=epoch)
+                summary_writers['train'].add_scalar("loss/all", v_losses.avg + pi_losses.avg, global_step=epoch)
                 summary_writers['train'].flush()
 
             self.nnet.eval()
@@ -198,9 +198,9 @@ class NNetWrapper(NeuralNet):
                     step(batch_start, batch_end)
 
             if summary_writers is not None:
-                summary_writers['val'].add_scalar("pi/loss", pi_losses.avg, global_step=epoch)
-                summary_writers['val'].add_scalar("v/loss", v_losses.avg, global_step=epoch)
-                summary_writers['val'].add_scalar("all/loss", v_losses.avg + pi_losses.avg, global_step=epoch)
+                summary_writers['val'].add_scalar("loss/policy", pi_losses.avg, global_step=epoch)
+                summary_writers['val'].add_scalar("loss/value", v_losses.avg, global_step=epoch)
+                summary_writers['val'].add_scalar("loss/all", v_losses.avg + pi_losses.avg, global_step=epoch)
                 summary_writers['val'].flush()
 
             # track best model
