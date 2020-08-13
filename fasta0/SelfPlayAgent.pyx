@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import torch.multiprocessing as mp
 
-from MCTS import MCTS
+from .MCTS import MCTS
 
 
 class SelfPlayAgent(mp.Process):

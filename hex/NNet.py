@@ -227,6 +227,14 @@ class NNetWrapper(NeuralNet):
 
         return torch.exp(pi).data.cpu().numpy()[0], v.data.cpu().numpy()[0]
 
+    def process(self, batch):
+        batch = batch.to(device=self.device)
+        self.nnet.eval()
+        with torch.no_grad():
+            pi, v = self.nnet(batch_to_net(batch, self.args, self.device))
+
+        return torch.exp(pi), v
+
     def loss_pi(self, targets, outputs):
         return -torch.sum(targets * outputs) / targets.size()[0]
 

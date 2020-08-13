@@ -1,19 +1,20 @@
-from MCTS import MCTS
-from SelfPlayAgent import SelfPlayAgent
+from .MCTS import MCTS
+from .SelfPlayAgent import SelfPlayAgent
 import torch
 from pathlib import Path
 from glob import glob
 from torch import multiprocessing as mp
 from torch.utils.data import TensorDataset, ConcatDataset, DataLoader
-from tensorboardX import SummaryWriter
-from Arena import Arena
+from torch.utils.tensorboard import SummaryWriter
+from .Arena import Arena
 from GenericPlayers import RandomPlayer, NNPlayer
-from pytorch_classification.utils import Bar, AverageMeter
+from utils import AverageMeter
 from queue import Empty
 from time import time
 import numpy as np
 from math import ceil
 import os
+from tqdm import tqdm
 
 
 class Coach:
@@ -45,7 +46,7 @@ class Coach:
         self.completed = mp.Value('i', 0)
         self.games_played = mp.Value('i', 0)
         if self.args.run_name != '':
-            self.writer = SummaryWriter(log_dir='runs/'+self.args.run_name)
+            self.writer = SummaryWriter(log_dir='logs/'+self.args.run_name)
         else:
             self.writer = SummaryWriter()
         self.args.expertValueWeight.current = self.args.expertValueWeight.start
@@ -101,7 +102,8 @@ class Coach:
 
     def processSelfPlayBatches(self):
         sample_time = AverageMeter()
-        bar = Bar('Generating Samples', max=self.args.gamesPerIteration)
+        #bar = Bar('Generating Samples', max=self.args.gamesPerIteration)
+        bar = tqdm(desc='Generating Samples', total=self.args.gamesPerIteration)
         end = time()
 
         n = 0
@@ -120,10 +122,13 @@ class Coach:
                 sample_time.update((time() - end) / (size - n), size - n)
                 n = size
                 end = time()
-            bar.suffix = f'({size}/{self.args.gamesPerIteration}) Sample Time: {sample_time.avg:.3f}s | Total: {bar.elapsed_td} | ETA: {bar.eta_td:}'
-            bar.goto(size)
-        bar.update()
-        bar.finish()
+
+            bar.set_postfix(sample_time=sample_time.avg)
+            bar.update(size - bar.n)
+        #    bar.suffix = f'({size}/{self.args.gamesPerIteration}) Sample Time: {sample_time.avg:.3f}s | Total: {bar.elapsed_td} | ETA: {bar.eta_td:}'
+        #    bar.goto(size)
+        #bar.update()
+        #bar.finish()
         print()
 
     def killSelfPlayAgents(self):
