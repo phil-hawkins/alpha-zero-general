@@ -185,7 +185,7 @@ class NNetWrapper(NeuralNet):
                 summary_writers['train'].add_scalar("loss/policy", pi_losses.avg, global_step=epoch)
                 summary_writers['train'].add_scalar("loss/value", v_losses.avg, global_step=epoch)
                 summary_writers['train'].add_scalar("loss/all", v_losses.avg + pi_losses.avg, global_step=epoch)
-                summary_writers['train'].add_scalar("lr", scheduler.get_last_lr(), global_step=epoch)
+                summary_writers['train'].add_scalar("lr", optimizer.param_groups[0]['lr'], global_step=epoch)
                 summary_writers['train'].flush()
 
             self.nnet.eval()
