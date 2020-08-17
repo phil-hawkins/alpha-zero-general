@@ -223,6 +223,7 @@ class NNetWrapper(NeuralNet):
 
             # track best model
             total_loss = pi_losses.avg + v_losses.avg
+            scheduler.step(total_loss)
             if total_loss < min_loss:
                 logging.info('Best loss so far! Saving checkpoint.')
                 min_loss = total_loss

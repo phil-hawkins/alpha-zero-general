@@ -16,3 +16,4 @@ pretrained_models/**
 results/data/**
 
 temp/**
+tensorboard.html
