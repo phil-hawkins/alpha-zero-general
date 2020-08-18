@@ -66,73 +66,81 @@ from .board_graph import IdentifierEncoder, ZeroIdentifierEncoder, RandomIdentif
 class NNetWrapper(NeuralNet):
     def __init__(self, game, net_type="base_gat", lr=1e-3, epochs=10, batch_size=64):
 
-        def base_gat_args(id_encoder):
+        def base_gat_config(id_encoder):
             self.args['num_channels'] = 32
             self.args['expand_base'] = 2
             self.args['attn_heads'] = 1
             self.args['readout_attn_heads'] = 4
             self.args['id_encoder'] = id_encoder
+            self.xform_input = batch_to_net
+
+        def base_cnn_config():
+            self.args['num_channels'] = 128
+            self.args['board_size'] = game.board_size
+            self.args['res_blocks'] = 5
+            self.args['in_channels'] = 3
+            self.args['dropout'] = 0.3
+            self.xform_input = lambda x, a, device: x.to(device)
 
         self.net_type = net_type
         self.lr = lr
         self.epochs = epochs
         self.batch_size = batch_size
         self.args = dotdict({
-            'action_size': game.getActionSize(),
-            'dropout': 0.3,
-            'num_channels': 128,
-            'res_blocks': 5,
-            'in_channels': 3                   # 0/1/2 - black/white/empty
+            'action_size': game.getActionSize()
         })
 
         if self.net_type == "base_cnn":
+            base_cnn_config()
             self.nnet = CNNHex.base_cnn(game, self.args)
         elif self.net_type == "scalefree_base_cnn":
+            base_cnn_config()
             self.nnet = CNNHex.base_cnn(game, self.args)
         elif self.net_type == "recurrent_cnn":
+            base_cnn_config()
             self.args.res_blocks = 2
             self.nnet = RecurrentCNNHex.recurrent_cnn(game, self.args)
         elif self.net_type == "base_gat":
-            base_gat_args(IdentifierEncoder(d_model=28, max_seq_len=500))
+            base_gat_config(IdentifierEncoder(d_model=28, max_seq_len=500))
             self.nnet = GraphNet(self.args)
         elif self.net_type == "gat_res10":
-            base_gat_args(IdentifierEncoder(d_model=28, max_seq_len=500))
+            base_gat_config(IdentifierEncoder(d_model=28, max_seq_len=500))
             self.args['res_blocks'] = 10
             self.nnet = GraphNet(self.args)
         elif self.net_type == "gat_res15":
-            base_gat_args(IdentifierEncoder(d_model=28, max_seq_len=500))
+            base_gat_config(IdentifierEncoder(d_model=28, max_seq_len=500))
             self.args['res_blocks'] = 15
             self.nnet = GraphNet(self.args)
         elif self.net_type == "gat_res20":
-            base_gat_args(IdentifierEncoder(d_model=28, max_seq_len=500))
+            base_gat_config(IdentifierEncoder(d_model=28, max_seq_len=500))
             self.args['res_blocks'] = 20
             self.nnet = GraphNet(self.args)
         elif self.net_type == "gat_res30":
-            base_gat_args(IdentifierEncoder(d_model=28, max_seq_len=500))
+            base_gat_config(IdentifierEncoder(d_model=28, max_seq_len=500))
             self.args['res_blocks'] = 30
             self.nnet = GraphNet(self.args)
         elif self.net_type == "gat_res40":
-            base_gat_args(IdentifierEncoder(d_model=28, max_seq_len=500))
+            base_gat_config(IdentifierEncoder(d_model=28, max_seq_len=500))
             self.args['res_blocks'] = 40
             self.nnet = GraphNet(self.args)
         elif self.net_type == "gat_ch128":
-            base_gat_args(IdentifierEncoder(d_model=124, max_seq_len=500))
+            base_gat_config(IdentifierEncoder(d_model=124, max_seq_len=500))
             self.args['num_channels'] = 128
             self.nnet = GraphNet(self.args)
         elif self.net_type == "gat_zero_id":
-            base_gat_args(ZeroIdentifierEncoder(d_model=28))
+            base_gat_config(ZeroIdentifierEncoder(d_model=28))
             self.nnet = GraphNet(self.args)
         elif self.net_type == "gat_random_id":
-            base_gat_args(RandomIdentifierEncoder(d_model=28))
+            base_gat_config(RandomIdentifierEncoder(d_model=28))
             self.nnet = GraphNet(self.args)
         elif self.net_type == "gat_random_id_1d":
-            base_gat_args(RandomIdentifierEncoder(d_model=1))
+            base_gat_config(RandomIdentifierEncoder(d_model=1))
             self.nnet = GraphNet(self.args)
         elif self.net_type == "gat_random_id_10d":
-            base_gat_args(RandomIdentifierEncoder(d_model=10))
+            base_gat_config(RandomIdentifierEncoder(d_model=10))
             self.nnet = GraphNet(self.args)
         elif self.net_type == "gat_random_id_20d":
-            base_gat_args(RandomIdentifierEncoder(d_model=20))
+            base_gat_config(RandomIdentifierEncoder(d_model=20))
             self.nnet = GraphNet(self.args)
         else:
             raise Exception("Unknown model type {}".format(net_type))
@@ -159,7 +167,7 @@ class NNetWrapper(NeuralNet):
             boards, target_pis, target_vs = prep(boards), prep(target_pis), prep(target_vs)
 
             # compute output
-            out_pi, out_v = self.nnet(batch_to_net(boards, self.args, self.device))
+            out_pi, out_v = self.nnet(self.xform_input(boards, self.args, self.device))
             l_pi = self.loss_pi(target_pis, out_pi)
             l_v = self.loss_v(target_vs, out_v)
             total_loss = l_pi + l_v
@@ -240,7 +248,7 @@ class NNetWrapper(NeuralNet):
 
         self.nnet.eval()
         with torch.no_grad():
-            pi, v = self.nnet(batch_to_net(board, self.args, self.device))
+            pi, v = self.nnet(self.xform_input(board, self.args, self.device))
 
         return torch.exp(pi).data.cpu().numpy()[0], v.data.cpu().numpy()[0]
 
@@ -248,7 +256,7 @@ class NNetWrapper(NeuralNet):
         batch = batch.to(device=self.device)
         self.nnet.eval()
         with torch.no_grad():
-            pi, v = self.nnet(batch_to_net(batch, self.args, self.device))
+            pi, v = self.nnet(self.xform_input(batch, self.args, self.device))
 
         return torch.exp(pi), v
 
