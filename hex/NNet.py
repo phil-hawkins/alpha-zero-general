@@ -84,7 +84,7 @@ class NNetWrapper(NeuralNet):
             base_config()
             self.args['num_channels'] = 128
             self.args['dropout'] = 0.3
-            self.xform_input = lambda x, a, device: x.to(device)
+            self.xform_input = lambda x, a, device: x
 
         self.net_type = net_type
         self.lr = lr
