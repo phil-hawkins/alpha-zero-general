@@ -66,7 +66,13 @@ from .board_graph import IdentifierEncoder, ZeroIdentifierEncoder, RandomIdentif
 class NNetWrapper(NeuralNet):
     def __init__(self, game, net_type="base_gat", lr=1e-3, epochs=10, batch_size=64):
 
+        def base_config():
+            self.args['board_size'] = game.board_size
+            self.args['res_blocks'] = 5
+            self.args['in_channels'] = 3
+
         def base_gat_config(id_encoder):
+            base_config()
             self.args['num_channels'] = 32
             self.args['expand_base'] = 2
             self.args['attn_heads'] = 1
@@ -75,10 +81,8 @@ class NNetWrapper(NeuralNet):
             self.xform_input = batch_to_net
 
         def base_cnn_config():
+            base_config()
             self.args['num_channels'] = 128
-            self.args['board_size'] = game.board_size
-            self.args['res_blocks'] = 5
-            self.args['in_channels'] = 3
             self.args['dropout'] = 0.3
             self.xform_input = lambda x, a, device: x.to(device)
 
