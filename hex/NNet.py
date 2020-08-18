@@ -84,7 +84,7 @@ class NNetWrapper(NeuralNet):
             base_config()
             self.args['num_channels'] = 128
             self.args['dropout'] = 0.3
-            self.xform_input = lambda x, a, device: x
+            self.xform_input = lambda x, a, device: torch.tensor(x, device=device)
 
         self.net_type = net_type
         self.lr = lr
