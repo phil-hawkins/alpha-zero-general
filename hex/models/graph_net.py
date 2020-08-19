@@ -1,9 +1,8 @@
 import torch
 import torch.nn as nn
-from collections import OrderedDict
 from torch_geometric.nn import GATConv
 
-     
+
 class GATResBlock(torch.nn.Module):
     def __init__(self, channels, affine_bn=True, heads=1):
         super().__init__()
@@ -21,7 +20,7 @@ class GATResBlock(torch.nn.Module):
         x = self.gc_2(x, edge_index)
         x = self.bn_2(x).relu()
         x += residual
-        
+
         return x.relu()
 
 
@@ -39,8 +38,8 @@ class HeadBase(nn.Module):
         x0 = self.p0_bn(x0).relu()
         x1 = self.p1_lin(x1)
         x1 = self.p1_bn(x1).relu()
-        x = self.merge_lin(torch.cat((x0,x1), dim=1))
-        
+        x = self.merge_lin(torch.cat((x0, x1), dim=1))
+
         return x
 
 
@@ -56,9 +55,9 @@ class PolicyHead(HeadBase):
         indicies = batch[:, :2].T
         x = x.squeeze(dim=1)
         out = torch.sparse_coo_tensor(
-            size=(batch_sz, self.action_size), 
-            indices=indicies, 
-            values=x, 
+            size=(batch_sz, self.action_size),
+            indices=indicies,
+            values=x,
             device=x.device
         ).to_dense()
 
@@ -97,10 +96,10 @@ class Trunk(nn.Module):
         super().__init__()
 
         self.trunk_mlist = nn.ModuleList([
-            GATConv(in_channels=node_size_in, out_channels=h1_sz, heads=attn_heads), 
+            GATConv(in_channels=node_size_in, out_channels=h1_sz, heads=attn_heads),
             nn.BatchNorm1d(num_features=h1_sz),
             nn.ELU(),
-            GATConv(in_channels=h1_sz, out_channels=h2_sz, heads=attn_heads), 
+            GATConv(in_channels=h1_sz, out_channels=h2_sz, heads=attn_heads),
             nn.BatchNorm1d(num_features=h2_sz),
             nn.ReLU()
         ])
@@ -117,7 +116,7 @@ class Trunk(nn.Module):
 
 
 class GraphNet(nn.Module):
-    def __init__(self, args): 
+    def __init__(self, args):
         super(GraphNet, self).__init__()
 
         self.node_size_in = args.num_channels
@@ -130,7 +129,7 @@ class GraphNet(nn.Module):
 
     def align_nodes(self, x, batch):
         # mask out nodes that don't map to valid actions
-        valid_mask = batch[:,-1].bool()
+        valid_mask = batch[:, -1].bool()
         x = x[valid_mask]
 
         return x
@@ -141,7 +140,7 @@ class GraphNet(nn.Module):
         """
         for i in range(2):
             # clear the nodes that don't represent valid actions
-            valid_mask = batch[i][:,-1].bool()
+            valid_mask = batch[i][:, -1].bool()
             batch[i] = batch[i][valid_mask]
 
         # the only difference in the batch mappings is the non-empty nodes for each player
@@ -168,11 +167,88 @@ class GraphNet(nn.Module):
 
         return p, v
 
-class NativeGraphNet(GraphNet):
-    """ accepts input natively in graph format rather than a grid tensor 
-    """
-    def to_player_graphs(self, x):
-        # TODO
-        bg = BoardGraph.from_grid_board(x)
 
-        return edge_index, node_attr, batch
+class PolicyHead_1Trunk(nn.Module):
+    def __init__(self, channels, action_size):
+        super().__init__()
+        self.lin = nn.Linear(in_features=channels, out_features=channels)
+        self.bn = nn.BatchNorm1d(num_features=channels)
+        self.action_size = action_size
+        self.readout = nn.LogSoftmax(dim=1)
+
+    def forward(self, x, batch):
+        x = self.lin(x)
+        x = self.bn(x).relu()
+        batch_sz = batch[-1, 0].item() + 1
+        indicies = batch[:, :2].T
+        x = x.squeeze(dim=1)
+        out = torch.sparse_coo_tensor(
+            size=(batch_sz, self.action_size),
+            indices=indicies,
+            values=x,
+            device=x.device
+        ).to_dense()
+
+        return self.readout(out)
+
+
+class ValueHead_1Trunk(nn.Module):
+    def __init__(self, channels, attn_heads):
+        super().__init__()
+        self.channels = channels
+        self.lin = nn.Linear(in_features=self.channels, out_features=self.channels)
+        self.bn = nn.BatchNorm1d(num_features=self.channels)
+        self.mha = nn.MultiheadAttention(embed_dim=self.channels, num_heads=attn_heads)
+        self.readout_lin = nn.Linear(in_features=self.channels, out_features=1)
+        self.query = torch.ones((1, self.channels))
+
+    def forward(self, x, batch):
+        x = self.lin(x)
+        x = self.bn(x).relu()
+
+        _, batch_counts = batch[:, 0].unique(sorted=True, return_counts=True)
+        batch_sz = batch[-1, 0].item() + 1
+        out = torch.empty((batch_sz, self.channels), dtype=torch.float, device=x.device)
+        query = torch.ones((1, 1, self.channels), dtype=torch.float, device=x.device)
+        batch_start_ndx = 0
+
+        # do the readout attention on each graph seperatly
+        for i, bc in enumerate(batch_counts):
+            graph_batch = x[batch_start_ndx:batch_start_ndx + bc].unsqueeze(dim=0)
+            batch_start_ndx += bc
+            out[i], _ = self.mha(query, graph_batch, graph_batch, need_weights=False)
+        out = self.readout_lin(out).tanh()
+
+        return out
+
+
+class GraphNet_1Trunk(nn.Module):
+
+    def __init__(self, args):
+        super(GraphNet_1Trunk, self).__init__()
+
+        self.node_size_in = args.num_channels
+        h1_sz = self.node_size_in*args.expand_base
+        h2_sz = self.node_size_in*(args.expand_base**2)
+
+        self.trunk = Trunk(self.node_size_in, h1_sz, h2_sz, args.attn_heads, args.res_blocks)
+        self.p_head = PolicyHead_1Trunk(channels=h2_sz, action_size=args.action_size)
+        self.v_head = ValueHead_1Trunk(channels=h2_sz, attn_heads=args.readout_attn_heads)
+
+    def forward(self, x):
+        edge_index, node_attr, batch = x
+        x = self.trunk(node_attr, edge_index)
+        p = self.p_head(x, batch)
+        v = self.v_head(x, batch)
+
+        return p, v
+
+
+# class NativeGraphNet(GraphNet):
+#     """ accepts input natively in graph format rather than a grid tensor
+#     """
+#     def to_player_graphs(self, x):
+#         # TODO
+#         bg = BoardGraph.from_grid_board(x)
+
+#         return edge_index, node_attr, batch

@@ -3,7 +3,8 @@ import torch
 import math
 
 from .graph_hex_board import GraphHexBoard
-from .players import HORIZONTAL_PLAYER, VERTICAL_PLAYER
+from .players import HORIZONTAL_PLAYER, VERTICAL_PLAYER, EMPTY_CELL
+
 
 class Board():
     def __init__(self, np_pieces):
@@ -13,7 +14,7 @@ class Board():
     @property
     def display_string(self):
         display_chars = {
-            0: ".",
+            EMPTY_CELL: ".",
             HORIZONTAL_PLAYER: "H",
             VERTICAL_PLAYER: "V"
         }
@@ -65,7 +66,7 @@ class BoardGraph():
         assert self.action_map.device == d
 
         return d
-        
+
     @device.setter
     def device(self, d):
         self.node_attr = self.node_attr.to(device=d)
@@ -75,7 +76,7 @@ class BoardGraph():
     @classmethod
     def from_graph_board(cls, board):
         assert isinstance(board, GraphHexBoard)
-        
+
         action_map = torch.stack([
             torch.arange(board.node_attr.size(0), device=board.node_attr.device),   # board_cell
             (board.node_attr[:, 0] == 0).long()                                     # valid_action (1/0)
@@ -91,12 +92,12 @@ class BoardGraph():
             graph object
         """
         board = Board(np_pieces=board)
-        
+
         device = board.np_pieces.device
         k = torch.tensor([
             [-1, -1,  0,  1,  1,  0],
-            [0,  1,  1,  0, -1, -1]]
-        , device=device).unsqueeze(dim=1).expand(2, board.cell_count, 6).reshape(2, -1)
+            [0,  1,  1,  0, -1, -1]
+        ], device=device).unsqueeze(dim=1).expand(2, board.cell_count, 6).reshape(2, -1)
         c = torch.ones((board.size, board.size), device=device).to_sparse().indices()
         c = c.unsqueeze(dim=2).expand(2, board.cell_count, 6).reshape(2, -1)
         edge_index = torch.cat([c, c + k], dim=0)
@@ -218,7 +219,7 @@ class BoardGraph():
         stone_mask = (self.node_attr[:, 0] != 0).cpu()
         untraversed = set(np.arange(len(stone_mask))[stone_mask].tolist())
         old_node_ndxs = []
-        
+
         while len(untraversed) > 0:
             node_ndx = untraversed.pop()
             group = get_group(node_ndx)
@@ -226,7 +227,7 @@ class BoardGraph():
                 untraversed -= group
                 old_node_ndxs += list(group)
                 self.merge_nodes(torch.tensor(list(group), dtype=torch.long))
-        
+
         self.remove_nodes(old_node_ndxs)
 
     def get_neighbourhood(self, node_ndx):
@@ -234,30 +235,6 @@ class BoardGraph():
         """
         neighbourhood_mask = self.edge_index[0, :] == node_ndx
         return self.edge_index[1, neighbourhood_mask].unique()
-
-        
-class PlayerGraph(BoardGraph):
-    def __init__(self, node_attr, edge_index, action_map, player):
-        """
-        self.d_edge_index - adjacency matrix (nodes, nodes) showing derived connections
-        self.d_edge_connectivity - (edges in d_edge_index) values tensor for edge connectivity  i.e. how many stone must be placed to secure the edge
-        self.d_carrier_index - adjacency matrix (edges in d_edge_index, nodes) showing derived carrier for each edge
-        """
-        super(PlayerGraph, self).__init__(node_attr, edge_index, action_map)
-        self.player = player
-
-    @classmethod
-    def from_board_graph(cls, board_graph, player):
-        assert player == -1 or player == 1
-
-        non_player_node_ndx = (board_graph.node_attr[:, 0] == -player).nonzero().squeeze()
-        player_graph = cls(board_graph.node_attr, board_graph.edge_index, board_graph.action_map, player)
-        player_graph.remove_nodes(non_player_node_ndx)
-        # in cannonical form player stone is always 1
-        player_graph.node_attr[:,0] *= player
-        #player_graph.reset_dgraph()
-
-        return player_graph
 
     def get_node_attr(self, size, id_encoder=None, add_one_hot_node_id=False):
         a = self.node_attr.float()
@@ -276,9 +253,46 @@ class PlayerGraph(BoardGraph):
 
         return a
 
+    def state_to_planes(self):
+        """ split attributes into planes for (player V, player H, empty)
+        """
+        cell_state = self.node_attr[:, 0].unsqueeze(dim=1)
+        player_v = (cell_state == VERTICAL_PLAYER).float()
+        player_h = (cell_state == HORIZONTAL_PLAYER).float()
+        empty = (cell_state == EMPTY_CELL).float()
+        self.node_attr = torch.cat([
+            player_v,
+            player_h,
+            empty,
+            self.node_attr[:, 1:].float()], dim=1)
+
+
+class PlayerGraph(BoardGraph):
+    def __init__(self, node_attr, edge_index, action_map, player):
+        """
+        self.d_edge_index - adjacency matrix (nodes, nodes) showing derived connections
+        self.d_edge_connectivity - (edges in d_edge_index) values tensor for edge connectivity  i.e. how many stone must be placed to secure the edge
+        self.d_carrier_index - adjacency matrix (edges in d_edge_index, nodes) showing derived carrier for each edge
+        """
+        super(PlayerGraph, self).__init__(node_attr, edge_index, action_map)
+        self.player = player
+
+    @classmethod
+    def from_board_graph(cls, board_graph, player):
+        assert player == -1 or player == 1
+
+        non_player_node_ndx = (board_graph.node_attr[:, 0] == -player).nonzero().squeeze()
+        player_graph = cls(board_graph.node_attr, board_graph.edge_index, board_graph.action_map, player)
+        player_graph.remove_nodes(non_player_node_ndx)
+        # in cannonical form player stone is always 1
+        player_graph.node_attr[:, 0] *= player
+        # player_graph.reset_dgraph()
+
+        return player_graph
+
     def shortest_path(self):
         """ finds the shortest path between the two distingused terminal nodes
-        measured in empty cells. 
+        measured in empty cells.
         """
         def update_node_dist(node_ndx, dist):
             for n in node_ndx:
@@ -292,8 +306,8 @@ class PlayerGraph(BoardGraph):
                     update_node_dist(nbr_ndx, ndist)
 
         # indicies of terminal nodes
-        tn1_ndx = self.node_attr[:, 1].bool().nonzero()[0,0]
-        tn2_ndx = self.node_attr[:, 2].bool().nonzero()[0,0]
+        tn1_ndx = self.node_attr[:, 1].bool().nonzero()[0, 0]
+        tn2_ndx = self.node_attr[:, 2].bool().nonzero()[0, 0]
         # min distance for each node from t1
         nd = np.full((self.node_attr.size(0),), dtype=np.float, fill_value=math.inf)
         update_node_dist([tn1_ndx], 0)
@@ -322,14 +336,14 @@ def batch_to_net(x, args, device):
                 1 : mask for nodes which are valid actions i.e. empty cells
                 2 : map from node index to action index in original input
 
-    """ 
+    """
     # marshall the input into a batch tensor or a list of graph objects
     if type(x).__module__ == np.__name__ or isinstance(x, torch.Tensor):
         if not isinstance(x, torch.Tensor):
             x = torch.FloatTensor(x.astype(np.float64)).to(device)
-        if len(x.shape) == 2:           
+        if len(x.shape) == 2:
             x = x.unsqueeze(dim=0)
-        
+
         board_to_graph = BoardGraph.from_matrix_board
     elif isinstance(x, GraphHexBoard):
         x = [x]
@@ -368,32 +382,94 @@ def batch_to_net(x, args, device):
     return edge_index, node_attr, batch
 
 
+def batch_to_1trunk_net(x, args, device):
+    """ converts a batch of boards to input features suitable for the one trunk graph net
+
+    input x is one of:
+        - np.array (row, col)
+        - np.array (batch, row, col)
+        - GraphHexBoard object
+        - list of GraphHexBoard objects
+
+    returns:
+        - edge_index : coo index for "super-graph" adjacency matrix (2=from/to, edges)
+                this is a union of all graphs in the batch
+        - node_attr : node embedding as column vectors (node, attributes)
+        - batch: (nodes, features (0-2 below))
+                0 : mapping from nodes to input graphs, as per torch geo batch
+                1 : mask for nodes which are valid actions i.e. empty cells
+                2 : map from node index to action index in original input
+
+    """
+    # marshall the input into a batch tensor or a list of graph objects
+    if type(x).__module__ == np.__name__ or isinstance(x, torch.Tensor):
+        if not isinstance(x, torch.Tensor):
+            x = torch.FloatTensor(x.astype(np.float64)).to(device)
+        if len(x.shape) == 2:
+            x = x.unsqueeze(dim=0)
+
+        board_to_graph = BoardGraph.from_matrix_board
+    elif isinstance(x, GraphHexBoard):
+        x = [x]
+        board_to_graph = BoardGraph.from_graph_board
+    elif type(x) == list:
+        board_to_graph = BoardGraph.from_graph_board
+    else:
+        raise Exception("Unsupported batch type for convertion to graph net input")
+
+    # build graph net input features from the boards
+    edge_index, node_attr = [], []
+    node_ndx_start = 0
+    batch = []
+    for bi, board in enumerate(x):
+        bg = board_to_graph(board)
+        bg.device = device
+        bg.merge_groups()
+        edge_index.append(bg.edge_index + node_ndx_start)
+        # split attrributes into planes for (player V, player H, empty)
+        bg.state_to_planes()
+        a = bg.get_node_attr(size=args.num_channels, id_encoder=args.id_encoder)
+        node_attr.append(a)
+        node_ndx_start += a.size(0)
+        g = torch.cat((
+            torch.full((a.size(0), 1), dtype=torch.long, fill_value=bi, device=device),
+            bg.action_map
+        ), dim=1)
+        batch.append(g)
+
+    edge_index = torch.cat(edge_index, dim=1)
+    node_attr = torch.cat(node_attr, dim=0)
+    batch = torch.cat(batch, dim=0)
+
+    return edge_index, node_attr, batch
+
+
 # from https://towardsdatascience.com/how-to-code-the-transformer-in-pytorch-24db27c8f9ec
 class IdentifierEncoder(torch.nn.Module):
     def __init__(self, d_model, max_seq_len=200, base_wave_length=5):
         super().__init__()
         assert (d_model % 2) == 0, "identifier embedding must have an even number of dimentions"
         self.d_model = d_model
-        
-        # create constant 'pe' matrix with values dependant on 
+
+        # create constant 'pe' matrix with values dependant on
         # pos and i
         pe = torch.zeros(max_seq_len, d_model)
         for pos in range(max_seq_len):
             for i in range(0, d_model, 2):
                 pe[pos, i] = math.sin(pos / (base_wave_length ** ((2 * i)/d_model)))
                 pe[pos, i + 1] = math.cos(pos / (base_wave_length ** ((2 * i)/d_model)))
-                
-        self.pe = pe #.unsqueeze(0)
-        #self.register_buffer('pe', self.pe)
- 
-    
+
+        self.pe = pe  # .unsqueeze(0)
+        # self.register_buffer('pe', self.pe)
+
     def forward(self, x):
         # make embeddings relatively larger
-        #x = x * math.sqrt(self.d_model)
+        # x = x * math.sqrt(self.d_model)
         device = x.device
         x = self.pe[x].to(device)
 
         return x
+
 
 class ZeroIdentifierEncoder(torch.nn.Module):
     def __init__(self, d_model):
@@ -405,6 +481,7 @@ class ZeroIdentifierEncoder(torch.nn.Module):
         x = torch.zeros(x.size(0), self.d_model, device=device)
 
         return x
+
 
 class RandomIdentifierEncoder(torch.nn.Module):
     def __init__(self, d_model):
