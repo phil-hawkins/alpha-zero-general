@@ -67,7 +67,6 @@ class NNetWrapper(NeuralNet):
     def __init__(self, game, net_type="base_gat", lr=1e-3, epochs=10, batch_size=64):
 
         def base_config():
-            self.args['board_size'] = game.board_size
             self.args['res_blocks'] = 5
             self.args['in_channels'] = 3
 

@@ -121,18 +121,23 @@
             ]
         },
         {
-            "name": "Vortex Pit 5x5 - net vs human",
+            "name": "Vortex Pit 6x6 - net+MCTS vs human",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/pit_hex.py",
+            "program": "${workspaceFolder}/pit_agents.py",
             "console": "integratedTerminal",
             "redirectOutput": true,
             "args" : [
-                "--game_board_size", "5",
+                "--game_board_size", "6",
                 "--board_type",  "vortex",
-                "--p1_MCTS_sims", "100",
-                "--player2", "human",
-                "--node_nums"
+                "--UI", "graphic",
+                "--num_games", "2",
+                "--node_nums",
+                "--agent1", "MCTSnet",
+                "--agent1_nnet", "gat_res20",
+                "--agent1_nn_checkpoint", "temp/pretrain/gat_res20.chk",
+                "--agent1_MCTS_sims", "100",
+                "--agent2", "human"
             ]
         },
         {
@@ -173,6 +178,19 @@
                 "--agent2", "NN",
                 "--agent2_nnet", "base_cnn",
                 "--agent2_nn_checkpoint", "temp/pretrain/base_cnn.chk"
+            ]
+        },
+        {
+            "name": "Pretrain base_gat",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/pretrain.py",
+            "console": "integratedTerminal",
+            "redirectOutput": true,
+            "args" : [
+                "--nnet", "base_gat",
+                "--example_file", "hex_6x6.pth.tar.examples",
+                "--game_board_size", "6"
             ]
         },
         {

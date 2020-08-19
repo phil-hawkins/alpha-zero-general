@@ -139,7 +139,7 @@ class BoardGraph():
         node_attr = torch.cat([board_node_attr, side_node_attr])
         action_map = torch.stack([
             torch.arange(node_attr.size(0), device=device),  # board_cell
-            (node_attr[:, 0] == 0).long()                    # valid_action (1/0)
+            (node_attr[:, 0] == EMPTY_CELL).long()           # valid_action (1/0)
         ], dim=1)
 
         return cls(node_attr, edge_index, action_map)

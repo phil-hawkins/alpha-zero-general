@@ -71,6 +71,7 @@ def multiplane(x):
 
     return torch.stack(planes, dim=1).float()
 
+
 class CNNHex(Module):
 
     def __init__(self, game, args, v_head):
@@ -104,7 +105,7 @@ class CNNHex(Module):
 
     @classmethod
     def base_cnn(cls, game, args):
-        return cls(game, args, ValueHead(in_channels=args.num_channels, feature_size=args.board_size**2))
+        return cls(game, args, ValueHead(in_channels=args.num_channels, feature_size=game.board_size**2))
 
     @classmethod
     def scalefree_base_cnn(cls, game, args):

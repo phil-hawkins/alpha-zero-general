@@ -173,12 +173,14 @@ class PolicyHead_1Trunk(nn.Module):
         super().__init__()
         self.lin = nn.Linear(in_features=channels, out_features=channels)
         self.bn = nn.BatchNorm1d(num_features=channels)
+        self.final_lin = nn.Linear(in_features=channels, out_features=1)
         self.action_size = action_size
         self.readout = nn.LogSoftmax(dim=1)
 
     def forward(self, x, batch):
         x = self.lin(x)
         x = self.bn(x).relu()
+        x = self.final_lin(x)
         batch_sz = batch[-1, 0].item() + 1
         indicies = batch[:, :2].T
         x = x.squeeze(dim=1)
@@ -198,6 +200,7 @@ class ValueHead_1Trunk(nn.Module):
         self.channels = channels
         self.lin = nn.Linear(in_features=self.channels, out_features=self.channels)
         self.bn = nn.BatchNorm1d(num_features=self.channels)
+        self.final_lin = nn.Linear(in_features=channels, out_features=channels)
         self.mha = nn.MultiheadAttention(embed_dim=self.channels, num_heads=attn_heads)
         self.readout_lin = nn.Linear(in_features=self.channels, out_features=1)
         self.query = torch.ones((1, self.channels))
@@ -205,6 +208,7 @@ class ValueHead_1Trunk(nn.Module):
     def forward(self, x, batch):
         x = self.lin(x)
         x = self.bn(x).relu()
+        x = self.final_lin(x)
 
         _, batch_counts = batch[:, 0].unique(sorted=True, return_counts=True)
         batch_sz = batch[-1, 0].item() + 1
@@ -238,6 +242,12 @@ class GraphNet_1Trunk(nn.Module):
     def forward(self, x):
         edge_index, node_attr, batch = x
         x = self.trunk(node_attr, edge_index)
+
+        # clear the nodes that don't represent valid actions
+        valid_mask = batch[:, -1].bool()
+        batch = batch[valid_mask]
+        x = x[valid_mask]
+        
         p = self.p_head(x, batch)
         v = self.v_head(x, batch)
 
