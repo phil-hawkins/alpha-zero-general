@@ -153,6 +153,28 @@
                 "--agent2", "MCTS",
                 "--agent2_MCTS_sims", "100"
             ]
+        },
+        {
+            "name": "Hex Pit 6x6 - GAT vs CNN (net only)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/pit_agents.py",
+            "console": "integratedTerminal",
+            "redirectOutput": true,
+            "args" : [
+                "--game_board_size", "6",
+                "--board_type",  "hex",
+                "--UI", "ascii",
+                "--num_games", "2",
+                "--node_nums",
+                "--agent1", "NN",
+                "--agent1_nnet", "base_gat",
+                "--agent1_nn_checkpoint", "temp/pretrain/base_gat.chk",
+                "--agent2", "NN",
+                "--agent2_nnet", "base_cnn",
+                "--agent2_nn_checkpoint", "temp/pretrain/base_cnn.chk"
+            ]
         }
     ]
 }
+

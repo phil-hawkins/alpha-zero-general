@@ -68,7 +68,7 @@ class Arena():
             sleep(3)
         if verbose:
             assert self.display
-            log.info("Game over: Turn ", str(it), "Result ", str(self.game.getGameEnded(board, 1)))
+            log.info("Game over: Turn {} Result {}".format(it, self.game.getGameEnded(board, 1)))
             self.display(board)
         if self.on_game_end:
             self.on_game_end()

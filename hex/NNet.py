@@ -78,20 +78,28 @@ class NNetWrapper(NeuralNet):
             self.args['attn_heads'] = 1
             self.args['readout_attn_heads'] = 4
             self.args['id_encoder'] = id_encoder
-            self.xform_input = batch_to_net
+            self.xform_input = lambda x: batch_to_net(x, self.args, self.device)
+
+        def xform_cnn_input(x):
+            x = torch.tensor(x, device=self.device)
+            if len(x.shape) == 2:
+                x = x.unsqueeze(dim=0)
+            return x
 
         def base_cnn_config():
             base_config()
             self.args['num_channels'] = 128
             self.args['dropout'] = 0.3
-            self.xform_input = lambda x, a, device: torch.tensor(x, device=device)
+            self.xform_input = lambda x: xform_cnn_input(x)
 
         self.net_type = net_type
         self.lr = lr
         self.epochs = epochs
         self.batch_size = batch_size
+        self.action_size = game.getActionSize()
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.args = dotdict({
-            'action_size': game.getActionSize()
+            'action_size': self.action_size
         })
 
         if self.net_type == "base_cnn":
@@ -149,8 +157,6 @@ class NNetWrapper(NeuralNet):
         else:
             raise Exception("Unknown model type {}".format(net_type))
 
-        self.action_size = game.getActionSize()
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.nnet.to(device=self.device)
 
     def train(self, examples, checkpoint_folder="checkpoint", summary_writers=None):
@@ -171,7 +177,7 @@ class NNetWrapper(NeuralNet):
             boards, target_pis, target_vs = prep(boards), prep(target_pis), prep(target_vs)
 
             # compute output
-            out_pi, out_v = self.nnet(self.xform_input(boards, self.args, self.device))
+            out_pi, out_v = self.nnet(self.xform_input(boards))
             l_pi = self.loss_pi(target_pis, out_pi)
             l_v = self.loss_v(target_vs, out_v)
             total_loss = l_pi + l_v
@@ -252,7 +258,7 @@ class NNetWrapper(NeuralNet):
 
         self.nnet.eval()
         with torch.no_grad():
-            pi, v = self.nnet(self.xform_input(board, self.args, self.device))
+            pi, v = self.nnet(self.xform_input(board))
 
         return torch.exp(pi).data.cpu().numpy()[0], v.data.cpu().numpy()[0]
 
@@ -260,7 +266,7 @@ class NNetWrapper(NeuralNet):
         batch = batch.to(device=self.device)
         self.nnet.eval()
         with torch.no_grad():
-            pi, v = self.nnet(self.xform_input(batch, self.args, self.device))
+            pi, v = self.nnet(self.xform_input(batch))
 
         return torch.exp(pi), v
 
