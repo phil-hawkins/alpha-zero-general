@@ -134,6 +134,10 @@ class NNetWrapper(NeuralNet):
             base_gat_config(IdentifierEncoder(d_model=28, max_seq_len=500))
             self.args['res_blocks'] = 40
             self.nnet = GraphNet(self.args)
+        elif self.net_type == "gat_res50":
+            base_gat_config(IdentifierEncoder(d_model=28, max_seq_len=500))
+            self.args['res_blocks'] = 50
+            self.nnet = GraphNet(self.args)
         elif self.net_type == "gat_ch128":
             base_gat_config(IdentifierEncoder(d_model=124, max_seq_len=500))
             self.args['num_channels'] = 128

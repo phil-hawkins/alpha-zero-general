@@ -78,35 +78,6 @@ def main(_argv):
         'checkpoint': 'checkpoint',
         'data': 'data',
     })
-    # args = dotdict({
-    #     'numIters': FLAGS.numIters,
-    #     'numEps': FLAGS.numEps,
-    #     'tempThreshold': FLAGS.tempThreshold,
-    #     'updateThreshold': FLAGS.updateThreshold,
-    #     'maxlenOfQueue': FLAGS.maxlenOfQueue,
-    #     'numMCTSSims': FLAGS.numMCTSSims,
-    #     'arenaCompare': FLAGS.arenaCompare,
-    #     'cpuct': FLAGS.cpuct,
-
-    #     'checkpoint': FLAGS.load_folder,
-    #     'save_prefix': FLAGS.save_prefix,
-    #     'load_model': FLAGS.load_model,
-    #     'load_folder_file': (FLAGS.load_folder, FLAGS.load_file),
-    #     'examples_file': FLAGS.examples_file,
-    #     'numItersForTrainExamplesHistory': FLAGS.numItersForTrainExamplesHistory,
-
-    #     'start_iteration': FLAGS.start_iteration,
-
-    #     'gamesPerIteration': 4*128*(mp.cpu_count()-1),
-    #     'process_batch_size': FLAGS.batch_size,
-    #     'workers': mp.cpu_count() - 1,
-    #     'run_name': os.path.join(FLAGS.nnet, FLAGS.job_id),
-    #     'expertValueWeight': dotdict({
-    #         'start': 0,
-    #         'end': 0,
-    #         'iterations': 35
-    #     })
-    # })
 
     log.info('Loading %s...', GraphHexGame.__name__)
     g = MatrixHexGame(FLAGS.game_board_size, FLAGS.game_board_size)
