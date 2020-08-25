@@ -280,7 +280,7 @@ class PlayerGraph(BoardGraph):
         self.edge_index_2bridge = edge_index_2bridge
 
     def calc_2bridge_edge_index(self):
-        A = self.adjacency_matrix.to_dense()
+        A = self.adjacency_matrix.to_dense().float()
         A = (A.matmul(A) - 1.).relu()
         A.fill_diagonal_(0.)
         self.edge_index_2bridge = A.nonzero().T
