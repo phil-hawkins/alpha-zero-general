@@ -281,8 +281,8 @@ class PlayerGraph(BoardGraph):
 
     def calc_2bridge_edge_index(self):
         A = self.adjacency_matrix.to_dense()
-        A = A.matmul(A) > 1
-        A.fill_diagonal_(False)
+        A = (A.matmul(A) - 1.).relu()
+        A.fill_diagonal_(0.)
         self.edge_index_2bridge = A.nonzero().T
 
     @classmethod
@@ -364,7 +364,8 @@ def batch_to_net(x, args, device):
 
     # split out the player graphs and build graph net input features from the boards
     player_graph = [None, None]
-    edge_index, node_attr = [[], [], [], []], [[], []]
+    edge_index = [[], [], [], []]
+    node_attr = [[], []]
     node_ndx_start = [0, 0]
     batch = [[], []]
     for bi, board in enumerate(x):
