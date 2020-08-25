@@ -10,7 +10,7 @@ sys.path.append('../../')
 from utils import dotdict, AverageMeter
 from NeuralNet import NeuralNet
 from .models.scale_cnn import CNNHex, RecurrentCNNHex
-from .models.graph_net import GraphNet, GraphNet_1Trunk
+from .models.graph_net import GraphNet, GraphNet_1Trunk, GraphNet_2Bridge
 from .board_graph import IdentifierEncoder, ZeroIdentifierEncoder, RandomIdentifierEncoder, batch_to_net, batch_to_1trunk_net
 
 # args = dotdict({
@@ -163,6 +163,9 @@ class NNetWrapper(NeuralNet):
             base_gat_config(IdentifierEncoder(d_model=26, max_seq_len=500))
             self.xform_input = lambda x: batch_to_1trunk_net(x, self.args, self.device)
             self.nnet = GraphNet_1Trunk(self.args)
+        elif self.net_type == "gat_2bridge":
+            base_gat_config(IdentifierEncoder(d_model=28, max_seq_len=500))
+            self.nnet = GraphNet_2Bridge(self.args)
         else:
             raise Exception("Unknown model type {}".format(net_type))
 

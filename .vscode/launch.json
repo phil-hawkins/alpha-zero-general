@@ -54,10 +54,8 @@
             "redirectOutput": true,
             "args" : [
                 "--game_board_size", "4",
-                "--nnet", "base_gat",
+                "--nnet", "gat_2bridge",
                 "--load_folder", "./temp/gat",
-                "--load_model",
-                "--load_file", "checkpoint_3.pth.tar",
                 "--numMCTSSims", "20",
                 "--numIters", "1",
                 "--start_iteration", "4",
