@@ -207,7 +207,7 @@ class NNetWrapper(NeuralNet):
 
         # TODO: add support for graph based board representation
         optimizer = optim.Adam(self.nnet.parameters(), lr=self.lr)
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=2)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.2, patience=2)
         min_loss = math.inf
 
         for epoch in range(self.epochs):

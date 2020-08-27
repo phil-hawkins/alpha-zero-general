@@ -28,7 +28,6 @@ flags.DEFINE_integer('arenaCompare', 40, 'Number of games to play during arena p
 flags.DEFINE_integer('cpuct', 1, 'constant multiplier for predictor + Upper confidence bound for trees (modified from PUCB in http://gauss.ececs.uc.edu/Conferences/isaim2010/papers/rosin.pdf)')
 flags.DEFINE_integer('game_board_size', 5, 'overide default size')
 flags.DEFINE_string('nnet', 'base_gat', 'neural net for p,v estimation')
-flags.DEFINE_string('save_prefix', 'base_gat_', 'prefix for best model save file')
 flags.DEFINE_integer('numItersForTrainExamplesHistory', 100, 'Number of training iterations to keep examples for')
 
 flags.DEFINE_boolean('load_model', False, 'load model and training examples from checkpoint')
@@ -40,8 +39,6 @@ flags.DEFINE_integer('start_iteration', 1, 'Iteration to start training at')
 
 log = logging.getLogger(__name__)
 coloredlogs.install(level='INFO')  # Change this to DEBUG to see more info.
-
-
 
 def main(_argv):
     args = dotdict({
