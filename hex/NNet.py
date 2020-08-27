@@ -166,6 +166,10 @@ class NNetWrapper(NeuralNet):
         elif self.net_type == "gat_2bridge":
             base_gat_config(IdentifierEncoder(d_model=28, max_seq_len=500))
             self.nnet = GraphNet_2Bridge(self.args)
+        elif self.net_type == "gat_2b_res50":
+            base_gat_config(RandomIdentifierEncoder(d_model=28))
+            self.args['res_blocks'] = 50
+            self.nnet = GraphNet_2Bridge(self.args)
         else:
             raise Exception("Unknown model type {}".format(net_type))
 
