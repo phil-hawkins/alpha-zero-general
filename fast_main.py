@@ -81,7 +81,7 @@ def main(_argv):
     log.info('Loading %s...', NNet.__name__)
     nnet = NNet(g, net_type=FLAGS.nnet, lr=FLAGS.learning_rate, epochs=FLAGS.epochs, batch_size=FLAGS.batch_size)
 
-    if args.load_model:
+    if FLAGS.load_model:
         log.info('Loading checkpoint "%s/%s"...', FLAGS.load_folder, FLAGS.load_file)
         nnet.load_checkpoint(FLAGS.load_folder, FLAGS.load_file)
     else:
