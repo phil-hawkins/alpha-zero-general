@@ -14,10 +14,10 @@ from utils import dotdict
 
 flags.DEFINE_integer('numIters', 1, 'Number of training iterations to run')
 flags.DEFINE_float('learning_rate', 1e-4, 'network learning rate')
-flags.DEFINE_integer('epochs', 20, 'Number of training epochs to run')
+flags.DEFINE_integer('train_steps_per_iteration', 1000, 'Number of training epochs to run')
 flags.DEFINE_string('job_id', 'testrun', 'job identifier from the batch system.  Used in tagging the logs')
-flags.DEFINE_integer('batch_size', 128, 'network training batch size')
-flags.DEFINE_integer('numEps', 100, 'Number of complete self-play games to simulate during a new iteration')
+flags.DEFINE_integer('process_batch_size', 2, 'network training batch size')
+flags.DEFINE_integer('train_batch_size', 128, 'network training batch size')
 flags.DEFINE_float('temp', 3.0, 'tempeature for first episode, reduces to 1.0 until tempThreshold')
 flags.DEFINE_integer('tempThreshold', 30, 'temp is a function of start_temp and episodeStep if episodeStep < tempThreshold, and thereafter uses temp=0.')
 flags.DEFINE_float('updateThreshold', 0.6, 'During arena playoff, new neural net will be accepted if threshold or more of games are won')
@@ -40,17 +40,18 @@ flags.DEFINE_integer('start_iteration', 0, 'Iteration to start training at')
 log = logging.getLogger(__name__)
 coloredlogs.install(level='INFO')  # Change this to DEBUG to see more info.
 
+
 def main(_argv):
     args = dotdict({
         'run_name': os.path.join(FLAGS.nnet, FLAGS.job_id),
         'workers': mp.cpu_count() - 1,
         'startIter': FLAGS.start_iteration,
         'numIters': FLAGS.numIters,
-        'process_batch_size': FLAGS.batch_size,
-        'train_batch_size': FLAGS.batch_size,
-        'train_steps_per_iteration': FLAGS.epochs,
+        'process_batch_size': FLAGS.process_batch_size,
+        'train_batch_size': FLAGS.train_batch_size,
+        'train_steps_per_iteration': FLAGS.train_steps_per_iteration,
         # should preferably be a multiple of process_batch_size and workers
-        'gamesPerIteration': FLAGS.batch_size*(mp.cpu_count()-1),
+        'gamesPerIteration': FLAGS.process_batch_size * (mp.cpu_count()-1),
         'numItersForTrainExamplesHistory': FLAGS.numItersForTrainExamplesHistory,
         'symmetricSamples': False,
         'numMCTSSims': FLAGS.numMCTSSims,
