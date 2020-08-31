@@ -82,7 +82,7 @@ def main(_argv):
     log.info('Loading %s...', GraphHexGame.__name__)
     g = MatrixHexGame(FLAGS.game_board_size, FLAGS.game_board_size)
     log.info('Loading %s...', NNet.__name__)
-    nnet = NNet(g, net_type=FLAGS.nnet, lr=FLAGS.learning_rate, epochs=FLAGS.epochs, batch_size=FLAGS.batch_size)
+    nnet = NNet(g, net_type=FLAGS.nnet, lr=FLAGS.learning_rate)
 
     if FLAGS.load_model:
         log.info('Loading checkpoint "%s/%s"...', FLAGS.load_folder, FLAGS.load_file)
