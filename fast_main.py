@@ -50,7 +50,7 @@ def main(_argv):
         'train_batch_size': FLAGS.batch_size,
         'train_steps_per_iteration': FLAGS.epochs,
         # should preferably be a multiple of process_batch_size and workers
-        'gamesPerIteration': 4*FLAGS.batch_size*(mp.cpu_count()-1),
+        'gamesPerIteration': FLAGS.batch_size*(mp.cpu_count()-1),
         'numItersForTrainExamplesHistory': FLAGS.numItersForTrainExamplesHistory,
         'symmetricSamples': False,
         'numMCTSSims': FLAGS.numMCTSSims,
@@ -76,6 +76,8 @@ def main(_argv):
         'data': 'data',
     })
 
+    log.info('Config initialised')
+    log.info('\tWorkers {}'.format(args.workers))
     log.info('Loading %s...', GraphHexGame.__name__)
     g = MatrixHexGame(FLAGS.game_board_size, FLAGS.game_board_size)
     log.info('Loading %s...', NNet.__name__)

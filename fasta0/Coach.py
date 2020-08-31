@@ -1,7 +1,6 @@
 from .MCTS import MCTS
 from .SelfPlayAgent import SelfPlayAgent
 import torch
-from pathlib import Path
 from glob import glob
 from torch import multiprocessing as mp
 from torch.utils.data import TensorDataset, ConcatDataset, DataLoader
@@ -12,7 +11,6 @@ from utils import AverageMeter
 from queue import Empty
 from time import time
 import numpy as np
-from math import ceil
 import os
 from tqdm import tqdm
 
@@ -22,7 +20,7 @@ class Coach:
         np.random.seed()
         self.game = game
         self.nnet = nnet
-        self.pnet = self.nnet.__class__(self.game)
+        self.pnet = self.nnet.__class__(self.game, self.nnet.net_type)  # the competitor network
         self.args = args
 
         networks = sorted(glob(self.args.checkpoint+'/*'))
