@@ -4,13 +4,14 @@ import math
 import numpy as np
 import torch
 import torch.optim as optim
+from time import time
 from tqdm import tqdm
 from absl import logging
 sys.path.append('../../')
 from utils import dotdict, AverageMeter
 from NeuralNet import NeuralNet
 from .models.scale_cnn import CNNHex, RecurrentCNNHex
-from .models.graph_net import GraphNet, GraphNet_1Trunk
+from .models.graph_net import GraphNet, GraphNet_1Trunk, GraphNet_2Bridge
 from .board_graph import IdentifierEncoder, ZeroIdentifierEncoder, RandomIdentifierEncoder, batch_to_net, batch_to_1trunk_net
 
 # args = dotdict({
@@ -62,6 +63,7 @@ from .board_graph import IdentifierEncoder, ZeroIdentifierEncoder, RandomIdentif
 #         v = (sp_p2 - sp_p1) / max(sp_p1, sp_p2)
 
 #     return v
+
 
 class NNetWrapper(NeuralNet):
     def __init__(self, game, net_type="base_gat", lr=1e-3, epochs=10, batch_size=64):
@@ -163,18 +165,80 @@ class NNetWrapper(NeuralNet):
             base_gat_config(IdentifierEncoder(d_model=26, max_seq_len=500))
             self.xform_input = lambda x: batch_to_1trunk_net(x, self.args, self.device)
             self.nnet = GraphNet_1Trunk(self.args)
+        elif self.net_type == "gat_2bridge":
+            base_gat_config(IdentifierEncoder(d_model=28, max_seq_len=500))
+            self.nnet = GraphNet_2Bridge(self.args)
+        elif self.net_type == "gat_2b_res50":
+            base_gat_config(RandomIdentifierEncoder(d_model=28))
+            self.args['res_blocks'] = 50
+            self.nnet = GraphNet_2Bridge(self.args)
         else:
             raise Exception("Unknown model type {}".format(net_type))
 
         self.nnet.to(device=self.device)
+        self.optimizer = optim.Adam(self.nnet.parameters(), lr=self.lr)
+        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, factor=0.2, patience=2)
+
+    def prep_features(self, t):
+        return t.contiguous().to(device=self.device)
+
+    def fast_a0_train(self, batches, train_steps, summary_writer=None):
+        self.nnet.train()
+
+        data_time = AverageMeter()
+        batch_time = AverageMeter()
+        pi_losses = AverageMeter()
+        v_losses = AverageMeter()
+        end = time()
+        current_step = 0
+
+        while current_step < train_steps:
+            t = tqdm(batches, desc='Training Net')
+            for batch_idx, batch in enumerate(t):
+                if current_step == self.epochs:
+                    break
+                current_step += 1
+                boards, target_pis, target_vs = batch
+                boards, target_pis, target_vs = self.prep_features(boards), self.prep_features(target_pis), self.prep_features(target_vs)
+
+                # measure data loading time
+                data_time.update(time() - end)
+
+                # compute output
+                out_pi, out_v = self.nnet(self.xform_input(boards))
+                l_pi = self.loss_pi(target_pis, out_pi)
+                l_v = self.loss_v(target_vs, out_v)
+                total_loss = l_pi + l_v
+                # record loss
+                pi_losses.update(l_pi.item(), boards.size(0))
+                v_losses.update(l_v.item(), boards.size(0))
+
+                # compute gradient and do SGD step
+                self.optimizer.zero_grad()
+                total_loss.backward()
+                self.optimizer.step()
+
+                if summary_writer is not None:
+                    summary_writer.add_scalar("step_loss/policy", pi_losses.avg, global_step=current_step)
+                    summary_writer.add_scalar("step_loss/value", v_losses.avg, global_step=current_step)
+                    summary_writer.add_scalar("step_loss/all", v_losses.avg + pi_losses.avg, global_step=current_step)
+                    summary_writer.flush()
+
+                # measure elapsed time
+                batch_time.update(time() - end)
+                end = time()
+
+                # plot progress
+                t.set_postfix(Loss_pi=pi_losses.avg, Loss_v=v_losses.avg)
+
+        self.scheduler.step(pi_losses.avg+v_losses.avg)
+
+        return pi_losses.avg, v_losses.avg
 
     def train(self, examples, checkpoint_folder="checkpoint", summary_writers=None):
         """
         examples: list of examples, each example is of form (board, pi, v)
         """
-
-        def prep(t):
-            return t.contiguous().to(device=self.device)
 
         def step(batch_start, batch_end):
             boards, pis, vs = list(zip(*examples[batch_start:batch_end]))
@@ -183,7 +247,7 @@ class NNetWrapper(NeuralNet):
             target_pis = torch.FloatTensor(np.array(pis))
             target_vs = torch.FloatTensor(np.array(vs).astype(np.float64))
 
-            boards, target_pis, target_vs = prep(boards), prep(target_pis), prep(target_vs)
+            boards, target_pis, target_vs = self.prep_features(boards), self.prep_features(target_pis), self.prep_features(target_vs)
 
             # compute output
             out_pi, out_v = self.nnet(self.xform_input(boards))
@@ -198,9 +262,6 @@ class NNetWrapper(NeuralNet):
 
             return total_loss
 
-        # TODO: add support for graph based board representation
-        optimizer = optim.Adam(self.nnet.parameters(), lr=self.lr)
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=2)
         min_loss = math.inf
 
         for epoch in range(self.epochs):
@@ -220,15 +281,15 @@ class NNetWrapper(NeuralNet):
                 total_loss = step(batch_start, batch_end)
 
                 # compute gradient and do SGD step
-                optimizer.zero_grad()
+                self.optimizer.zero_grad()
                 total_loss.backward()
-                optimizer.step()
+                self.optimizer.step()
 
             if summary_writers is not None:
                 summary_writers['train'].add_scalar("loss/policy", pi_losses.avg, global_step=epoch)
                 summary_writers['train'].add_scalar("loss/value", v_losses.avg, global_step=epoch)
                 summary_writers['train'].add_scalar("loss/all", v_losses.avg + pi_losses.avg, global_step=epoch)
-                summary_writers['train'].add_scalar("lr", optimizer.param_groups[0]['lr'], global_step=epoch)
+                summary_writers['train'].add_scalar("lr", self.optimizer.param_groups[0]['lr'], global_step=epoch)
                 summary_writers['train'].flush()
 
             self.nnet.eval()
@@ -250,7 +311,7 @@ class NNetWrapper(NeuralNet):
 
             # track best model
             total_loss = pi_losses.avg + v_losses.avg
-            scheduler.step(total_loss)
+            self.scheduler.step(total_loss)
             if total_loss < min_loss:
                 logging.info('Best loss so far! Saving checkpoint.')
                 min_loss = total_loss

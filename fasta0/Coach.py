@@ -1,7 +1,6 @@
 from .MCTS import MCTS
 from .SelfPlayAgent import SelfPlayAgent
 import torch
-from pathlib import Path
 from glob import glob
 from torch import multiprocessing as mp
 from torch.utils.data import TensorDataset, ConcatDataset, DataLoader
@@ -12,7 +11,6 @@ from utils import AverageMeter
 from queue import Empty
 from time import time
 import numpy as np
-from math import ceil
 import os
 from tqdm import tqdm
 
@@ -22,7 +20,7 @@ class Coach:
         np.random.seed()
         self.game = game
         self.nnet = nnet
-        self.pnet = self.nnet.__class__(self.game)
+        self.pnet = self.nnet.__class__(self.game, self.nnet.net_type)  # the competitor network
         self.args = args
 
         networks = sorted(glob(self.args.checkpoint+'/*'))
@@ -102,7 +100,6 @@ class Coach:
 
     def processSelfPlayBatches(self):
         sample_time = AverageMeter()
-        #bar = Bar('Generating Samples', max=self.args.gamesPerIteration)
         bar = tqdm(desc='Generating Samples', total=self.args.gamesPerIteration)
         end = time()
 
@@ -125,11 +122,6 @@ class Coach:
 
             bar.set_postfix(sample_time=sample_time.avg)
             bar.update(size - bar.n)
-        #    bar.suffix = f'({size}/{self.args.gamesPerIteration}) Sample Time: {sample_time.avg:.3f}s | Total: {bar.elapsed_td} | ETA: {bar.eta_td:}'
-        #    bar.goto(size)
-        #bar.update()
-        #bar.finish()
-        print()
 
     def killSelfPlayAgents(self):
         for i in range(self.args.workers):
@@ -191,7 +183,7 @@ class Coach:
 
     def train(self, iteration):
         datasets = []
-        #currentHistorySize = self.args.numItersForTrainExamplesHistory
+
         currentHistorySize = min(
             max(4, (iteration + 4)//2),
             self.args.numItersForTrainExamplesHistory)
@@ -209,11 +201,11 @@ class Coach:
         dataloader = DataLoader(dataset, batch_size=self.args.train_batch_size, shuffle=True,
                                 num_workers=self.args.workers, pin_memory=True)
 
-        l_pi, l_v = self.nnet.train(
-            dataloader, self.args.train_steps_per_iteration)
+        l_pi, l_v = self.nnet.fast_a0_train(dataloader, self.args.train_steps_per_iteration, self.writer)
         self.writer.add_scalar('loss/policy', l_pi, iteration)
         self.writer.add_scalar('loss/value', l_v, iteration)
         self.writer.add_scalar('loss/total', l_pi + l_v, iteration)
+        self.writer.add_scalar("lr", self.nnet.optimizer.param_groups[0]['lr'], global_step=iteration)
 
         self.nnet.save_checkpoint(
             folder=self.args.checkpoint, filename=f'iteration-{iteration:04d}.pkl')

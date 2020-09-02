@@ -147,7 +147,8 @@ class BoardGraph():
     @property
     def adjacency_matrix(self):
         v = torch.ones_like(self.edge_index[0])
-        return torch.sparse_coo_tensor(indices=self.edge_index, values=v, dtype=torch.long, device=self.edge_index.device)
+        n = self.node_attr.size(0)
+        return torch.sparse_coo_tensor(indices=self.edge_index, values=v, dtype=torch.long, size=(n, n), device=self.edge_index.device)
 
     def merge_nodes(self, nodes_ndx):
         assert len(nodes_ndx) > 0
@@ -268,7 +269,7 @@ class BoardGraph():
 
 
 class PlayerGraph(BoardGraph):
-    def __init__(self, node_attr, edge_index, action_map, player):
+    def __init__(self, node_attr, edge_index, action_map, player, edge_index_2bridge=None):
         """
         self.d_edge_index - adjacency matrix (nodes, nodes) showing derived connections
         self.d_edge_connectivity - (edges in d_edge_index) values tensor for edge connectivity  i.e. how many stone must be placed to secure the edge
@@ -276,6 +277,14 @@ class PlayerGraph(BoardGraph):
         """
         super(PlayerGraph, self).__init__(node_attr, edge_index, action_map)
         self.player = player
+        self.edge_index_2bridge = edge_index_2bridge
+
+    def calc_2bridge_edge_index(self):
+        A = self.adjacency_matrix.to_dense().float()
+        A = (A.matmul(A) - A - 1).relu()
+        # remove self loops
+        A.fill_diagonal_(0.)
+        self.edge_index_2bridge = A.nonzero().T
 
     @classmethod
     def from_board_graph(cls, board_graph, player):
@@ -284,6 +293,7 @@ class PlayerGraph(BoardGraph):
         non_player_node_ndx = (board_graph.node_attr[:, 0] == -player).nonzero().squeeze()
         player_graph = cls(board_graph.node_attr, board_graph.edge_index, board_graph.action_map, player)
         player_graph.remove_nodes(non_player_node_ndx)
+        player_graph.calc_2bridge_edge_index()
         # in cannonical form player stone is always 1
         player_graph.node_attr[:, 0] *= player
         # player_graph.reset_dgraph()
@@ -355,7 +365,8 @@ def batch_to_net(x, args, device):
 
     # split out the player graphs and build graph net input features from the boards
     player_graph = [None, None]
-    edge_index, node_attr = [[], []], [[], []]
+    edge_index = [[], [], [], []]
+    node_attr = [[], []]
     node_ndx_start = [0, 0]
     batch = [[], []]
     for bi, board in enumerate(x):
@@ -365,6 +376,7 @@ def batch_to_net(x, args, device):
         for i, player in enumerate([-1, 1]):
             player_graph[i] = PlayerGraph.from_board_graph(bg, player)
             edge_index[i].append(player_graph[i].edge_index + node_ndx_start[i])
+            edge_index[i+2].append(player_graph[i].edge_index_2bridge + node_ndx_start[i])
             a = player_graph[i].get_node_attr(size=args.num_channels, id_encoder=args.id_encoder)
             node_attr[i].append(a)
             node_ndx_start[i] += a.size(0)
@@ -375,7 +387,10 @@ def batch_to_net(x, args, device):
             batch[i].append(g)
 
     for i in range(2):
+        # one-hop edge index
         edge_index[i] = torch.cat(edge_index[i], dim=1)
+        # 2 bridge edge index
+        edge_index[i+2] = torch.cat(edge_index[i+2], dim=1)
         node_attr[i] = torch.cat(node_attr[i], dim=0)
         batch[i] = torch.cat(batch[i], dim=0)
 

@@ -1,6 +1,5 @@
 import logging
 import os
-import sys
 from collections import deque
 from pickle import Pickler, Unpickler
 from random import shuffle
@@ -54,8 +53,8 @@ class Coach():
             episodeStep += 1
             canonicalBoard = self.game.getCanonicalForm(board, self.curPlayer)
 
-            if 'start_temp' in self.args and (self.args['start_temp'] > 1.0) and (self.args.tempThreshold > 0) and (episodeStep < self.args.tempThreshold):
-                temp_step = (self.args['start_temp'] - 1.0) / self.args.tempThreshold
+            if 'temp' in self.args and (self.args['temp'] > 1.0) and (self.args.tempThreshold > 0) and (episodeStep < self.args.tempThreshold):
+                temp_step = (self.args['temp'] - 1.0) / self.args.tempThreshold
                 steps_till_threshold = self.args.tempThreshold - episodeStep
                 temp = 1.0 + (temp_step * steps_till_threshold)
             else:
@@ -94,7 +93,7 @@ class Coach():
                     self.mcts = MCTS(self.game, self.nnet, self.args)  # reset search tree
                     iterationTrainExamples += self.executeEpisode()
 
-                # save the iteration examples to the history 
+                # save the iteration examples to the history
                 self.trainExamplesHistory.append(iterationTrainExamples)
 
             if len(self.trainExamplesHistory) > self.args.numItersForTrainExamplesHistory:
@@ -102,7 +101,7 @@ class Coach():
                     f"Removing the oldest entry in trainExamples. len(trainExamplesHistory) = {len(self.trainExamplesHistory)}")
                 self.trainExamplesHistory.pop(0)
             # backup history to a file
-            # NB! the examples were collected using the model from the previous iteration, so (i-1)  
+            # NB! the examples were collected using the model from the previous iteration, so (i-1)
             self.saveTrainExamples(i - 1)
 
             # shuffle examples before training

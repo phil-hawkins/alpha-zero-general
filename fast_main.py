@@ -14,10 +14,10 @@ from utils import dotdict
 
 flags.DEFINE_integer('numIters', 1, 'Number of training iterations to run')
 flags.DEFINE_float('learning_rate', 1e-4, 'network learning rate')
-flags.DEFINE_integer('epochs', 20, 'Number of training epochs to run')
+flags.DEFINE_integer('train_steps_per_iteration', 1000, 'Number of training epochs to run')
 flags.DEFINE_string('job_id', 'testrun', 'job identifier from the batch system.  Used in tagging the logs')
-flags.DEFINE_integer('batch_size', 128, 'network training batch size')
-flags.DEFINE_integer('numEps', 100, 'Number of complete self-play games to simulate during a new iteration')
+flags.DEFINE_integer('process_batch_size', 2, 'network training batch size')
+flags.DEFINE_integer('train_batch_size', 128, 'network training batch size')
 flags.DEFINE_float('temp', 3.0, 'tempeature for first episode, reduces to 1.0 until tempThreshold')
 flags.DEFINE_integer('tempThreshold', 30, 'temp is a function of start_temp and episodeStep if episodeStep < tempThreshold, and thereafter uses temp=0.')
 flags.DEFINE_float('updateThreshold', 0.6, 'During arena playoff, new neural net will be accepted if threshold or more of games are won')
@@ -25,35 +25,33 @@ flags.DEFINE_integer('maxlenOfQueue', 200000, 'Number of game examples to train 
 flags.DEFINE_integer('numMCTSSims', 200, 'Number of games moves for MCTS to simulate')
 flags.DEFINE_integer('num_fast_MCTS_sims', 100, 'Number of games moves for MCTS to simulate')
 flags.DEFINE_integer('arenaCompare', 40, 'Number of games to play during arena play to determine if new net will be accepted')
-flags.DEFINE_integer('cpuct', 1, 'constant multiplier for predictor + Upper confidence bound for trees (modified from PUCB in http://gauss.ececs.uc.edu/Conferences/isaim2010/papers/rosin.pdf)')
+flags.DEFINE_float('cpuct', 1, 'constant multiplier for predictor + Upper confidence bound for trees (modified from PUCB in http://gauss.ececs.uc.edu/Conferences/isaim2010/papers/rosin.pdf)')
 flags.DEFINE_integer('game_board_size', 5, 'overide default size')
 flags.DEFINE_string('nnet', 'base_gat', 'neural net for p,v estimation')
-flags.DEFINE_string('save_prefix', 'base_gat_', 'prefix for best model save file')
 flags.DEFINE_integer('numItersForTrainExamplesHistory', 100, 'Number of training iterations to keep examples for')
 
 flags.DEFINE_boolean('load_model', False, 'load model and training examples from checkpoint')
 flags.DEFINE_string('load_folder', './temp/checkpoints', 'load model from folder')
 flags.DEFINE_string('load_file', 'best.pth.tar', 'load model from file')
 flags.DEFINE_string('examples_file', None, 'load examples from file')
-flags.DEFINE_integer('start_iteration', 1, 'Iteration to start training at')
+flags.DEFINE_integer('start_iteration', 0, 'Iteration to start training at')
 
 
 log = logging.getLogger(__name__)
 coloredlogs.install(level='INFO')  # Change this to DEBUG to see more info.
 
 
-
 def main(_argv):
     args = dotdict({
         'run_name': os.path.join(FLAGS.nnet, FLAGS.job_id),
         'workers': mp.cpu_count() - 1,
-        'startIter': 1,
+        'startIter': FLAGS.start_iteration,
         'numIters': FLAGS.numIters,
-        'process_batch_size': FLAGS.batch_size,
-        'train_batch_size': FLAGS.batch_size,
-        'train_steps_per_iteration': FLAGS.epochs,
+        'process_batch_size': FLAGS.process_batch_size,
+        'train_batch_size': FLAGS.train_batch_size,
+        'train_steps_per_iteration': FLAGS.train_steps_per_iteration,
         # should preferably be a multiple of process_batch_size and workers
-        'gamesPerIteration': 4*FLAGS.batch_size*(mp.cpu_count()-1),
+        'gamesPerIteration': FLAGS.process_batch_size * (mp.cpu_count()-1),
         'numItersForTrainExamplesHistory': FLAGS.numItersForTrainExamplesHistory,
         'symmetricSamples': False,
         'numMCTSSims': FLAGS.numMCTSSims,
@@ -79,10 +77,19 @@ def main(_argv):
         'data': 'data',
     })
 
+    log.info('Config initialised')
+    log.info('\tWorkers {}'.format(args.workers))
     log.info('Loading %s...', GraphHexGame.__name__)
     g = MatrixHexGame(FLAGS.game_board_size, FLAGS.game_board_size)
     log.info('Loading %s...', NNet.__name__)
-    nnet = NNet(g, net_type=FLAGS.nnet, lr=FLAGS.learning_rate, epochs=FLAGS.epochs, batch_size=FLAGS.batch_size)
+    nnet = NNet(g, net_type=FLAGS.nnet, lr=FLAGS.learning_rate)
+
+    if FLAGS.load_model:
+        log.info('Loading checkpoint "%s/%s"...', FLAGS.load_folder, FLAGS.load_file)
+        nnet.load_checkpoint(FLAGS.load_folder, FLAGS.load_file)
+    else:
+        log.warning('Not loading a checkpoint!')
+
     log.info('Loading the Coach...')
     c = Coach(g, nnet, args)
     log.info('Starting the learning process')
