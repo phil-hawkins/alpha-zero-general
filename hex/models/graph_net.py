@@ -333,11 +333,64 @@ class GraphNet_1Trunk(nn.Module):
         return p, v
 
 
-# class NativeGraphNet(GraphNet):
-#     """ accepts input natively in graph format rather than a grid tensor
-#     """
-#     def to_player_graphs(self, x):
-#         # TODO
-#         bg = BoardGraph.from_grid_board(x)
+class ValueHead_SideNode(nn.Module):
+    ''' This is a readout head for the value function that uses only embedding vectors 
+    from the nodes containing the artificial player indicator side cells
+    '''
+    def __init__(self, channels, attn_heads):
+        super().__init__()
+        self.channels = channels
+        self.lin1 = nn.Linear(in_features=4*channels, out_features=4*channels)
+        self.lin2 = nn.Linear(in_features=4*channels, out_features=1)
 
-#         return edge_index, node_attr, batch
+    def forward(self, side_nodes):
+        # concatenate side node features for each graph
+        out = torch.cat(side_nodes, dim=1)
+        out = self.lin1(out).relu()
+        out = self.lin2(out).tanh()
+
+        return out
+
+
+class GraphNet_SideNode(GraphNet):
+    def __init__(self, args):
+        super(GraphNet, self).__init__()
+
+        self.node_size_in = args.num_channels
+        h1_sz = self.node_size_in*args.expand_base
+        h2_sz = self.node_size_in*(args.expand_base**2)
+
+        self.trunk = Trunk(self.node_size_in, h1_sz, h2_sz, args.attn_heads, args.res_blocks)
+        self.p_head = PolicyHead(channels=h2_sz, action_size=args.action_size)
+        self.v_head = ValueHead_SideNode(channels=h2_sz)
+
+    def side_node_attr(self, node_in, trunk_out, batch):
+        batch_sz = batch[-1, 0].item() + 1
+        side_nodes = []
+        # select the two side nodes for each player graph using the input features that distinguish the side nodes
+        for i in (1, 2):
+            side_mask = node_in[:, i].bool()
+            assert side_mask.sum() == batch_sz
+            side_nodes.append(trunk_out[side_mask])
+
+        return side_nodes
+
+    def forward(self, x):
+        edge_index, node_attr, batch = x
+        out = []
+        side_nodes = []
+        for i in range(2):
+            o = self.trunk(node_attr[i], edge_index[i])
+            side_nodes.extend(self.side_node_attr(node_attr[i], o, batch[i]))
+            o = self.align_nodes(o, batch[i])
+            out.append(o)
+
+        batch = self.merge_batches(batch)
+        # the batch indicies should be consistant with both sets of nodes at this point
+        assert batch.size(0) == out[0].size(0)
+        assert batch.size(0) == out[1].size(0)
+
+        p = self.p_head(out[0], out[1], batch)
+        v = self.v_head(side_nodes)
+
+        return p, v

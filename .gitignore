@@ -17,3 +17,5 @@ results/data/**
 
 temp/**
 tensorboard.html
+hex/scratch.ipynb
+results/quant.ipynb
