@@ -337,7 +337,7 @@ class ValueHead_SideNode(nn.Module):
     ''' This is a readout head for the value function that uses only embedding vectors 
     from the nodes containing the artificial player indicator side cells
     '''
-    def __init__(self, channels, attn_heads):
+    def __init__(self, channels):
         super().__init__()
         self.channels = channels
         self.lin1 = nn.Linear(in_features=4*channels, out_features=4*channels)
