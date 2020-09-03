@@ -17,5 +17,6 @@ results/data/**
 
 temp/**
 tensorboard.html
-hex/scratch.ipynb
-results/quant.ipynb
+.vscode/settings.json
+logs/base_gat/testrun/events.out.tfevents.1598230297.phil-desktop.7399.0
+logs/base_gat/testrun/events.out.tfevents.1598230507.phil-desktop.8018.0
