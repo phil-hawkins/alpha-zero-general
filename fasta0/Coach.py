@@ -98,29 +98,80 @@ class Coach:
                               self.result_queue, self.completed, self.games_played, self.args))
             self.agents[i].start()
 
+    def agg_batch(self):
+        ''' collects process batches to do a larger training batch
+        '''
+        train_batch_ratio = self.args.train_batch_size // self.args.process_batch_size
+        working_workers = self.args.workers - self.completed.value
+        workers_to_batch = min(working_workers, train_batch_ratio)
+        start_time = time()
+
+        ids = []
+        for _ in range(workers_to_batch):
+            if time() - start_time > 1.:
+                break
+            try:
+                ids.append(self.ready_queue.get(timeout=1))
+            except Empty:
+                break
+
+        pos_processed = 0
+        if len(ids) > 0:
+            input_tensors = []
+            for id in ids:
+                input_tensors.append(self.input_tensors[id])
+            self.policy, self.value = self.nnet.process(torch.cat(input_tensors, dim=0))
+            start_batch_ndx = end_batch_ndx = 0
+            for i, id in enumerate(ids):
+                end_batch_ndx = start_batch_ndx + input_tensors[i].size(0)
+                self.policy_tensors[id].copy_(self.policy[start_batch_ndx:end_batch_ndx])
+                self.value_tensors[id].copy_(self.value[start_batch_ndx:end_batch_ndx])
+                self.batch_ready[id].set()
+                start_batch_ndx = end_batch_ndx
+            pos_processed = end_batch_ndx + 1
+
+        return pos_processed
+
+    def single_batch(self):
+        pos_processed = 0
+        try:
+            id = self.ready_queue.get(timeout=1)
+            self.policy, self.value = self.nnet.process(
+                self.input_tensors[id])
+            self.policy_tensors[id].copy_(self.policy)
+            self.value_tensors[id].copy_(self.value)
+            self.batch_ready[id].set()
+            pos_processed = self.value.size(0)
+        except Empty:
+            pass
+
+        return pos_processed
+
     def processSelfPlayBatches(self):
         sample_time = AverageMeter()
+        network_time = AverageMeter()
         bar = tqdm(desc='Generating Samples', total=self.args.gamesPerIteration)
         end = time()
 
         n = 0
         while self.completed.value != self.args.workers:
-            try:
-                id = self.ready_queue.get(timeout=1)
-                self.policy, self.value = self.nnet.process(
-                    self.input_tensors[id])
-                self.policy_tensors[id].copy_(self.policy)
-                self.value_tensors[id].copy_(self.value)
-                self.batch_ready[id].set()
-            except Empty:
-                pass
+            loop_time = time()
+            if self.args.aggrgate_process_batches:
+                ex = self.agg_batch()
+            else:
+                ex = self.single_batch()
+            if ex > 0:
+                network_time.update((time() - loop_time) / ex)
+
             size = self.games_played.value
             if size > n:
+                self.writer.add_scalar("Sample games", size)
+                self.writer.flush()
                 sample_time.update((time() - end) / (size - n), size - n)
                 n = size
                 end = time()
 
-            bar.set_postfix(sample_time=sample_time.avg)
+            bar.set_postfix(sample_time=sample_time.avg, network_time=network_time.avg)
             bar.update(size - bar.n)
 
     def killSelfPlayAgents(self):

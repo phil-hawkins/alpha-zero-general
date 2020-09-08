@@ -203,6 +203,18 @@
                 "--example_file", "hex_6x6.pth.tar.examples",
                 "--game_board_size", "6"
             ]
+        },
+        {
+            "name": "Fast A0 Hex 3x3",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/fast_main.py",
+            "console": "integratedTerminal",
+            "redirectOutput": true,
+            "args" : [
+                "--process_batch_size", "8",
+                "--train_batch_size", "128"
+            ]
         }
     ]
 }

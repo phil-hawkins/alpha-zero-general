@@ -18,6 +18,7 @@ flags.DEFINE_integer('train_steps_per_iteration', 1000, 'Number of training epoc
 flags.DEFINE_string('job_id', 'testrun', 'job identifier from the batch system.  Used in tagging the logs')
 flags.DEFINE_integer('process_batch_size', 2, 'network training batch size')
 flags.DEFINE_integer('train_batch_size', 128, 'network training batch size')
+flags.DEFINE_boolean('aggrgate_process_batches', False, 'collate process batches to as close as possible to the training batch size')
 flags.DEFINE_float('temp', 3.0, 'tempeature for first episode, reduces to 1.0 until tempThreshold')
 flags.DEFINE_integer('tempThreshold', 30, 'temp is a function of start_temp and episodeStep if episodeStep < tempThreshold, and thereafter uses temp=0.')
 flags.DEFINE_float('updateThreshold', 0.6, 'During arena playoff, new neural net will be accepted if threshold or more of games are won')
@@ -49,6 +50,7 @@ def main(_argv):
         'numIters': FLAGS.numIters,
         'process_batch_size': FLAGS.process_batch_size,
         'train_batch_size': FLAGS.train_batch_size,
+        'aggrgate_process_batches': FLAGS.aggrgate_process_batches,
         'train_steps_per_iteration': FLAGS.train_steps_per_iteration,
         # should preferably be a multiple of process_batch_size and workers
         'gamesPerIteration': FLAGS.process_batch_size * (mp.cpu_count()-1),
