@@ -194,44 +194,45 @@ class NNetWrapper(NeuralNet):
         v_losses = AverageMeter()
         end = time()
         current_step = 0
+        train_steps = min(train_steps, len(batches) * self.epochs)
 
-        while current_step < train_steps:
-            t = tqdm(batches, desc='Training Net')
-            for batch_idx, batch in enumerate(t):
-                if current_step == self.epochs:
-                    break
-                current_step += 1
-                boards, target_pis, target_vs = batch
-                boards, target_pis, target_vs = self.prep_features(boards), self.prep_features(target_pis), self.prep_features(target_vs)
+        with tqdm(total=train_steps, desc='Training Net') as t:
+            while current_step < train_steps:
+                for batch_idx, batch in enumerate(batches):
+                    if current_step == train_steps:
+                        break
+                    current_step += 1
+                    t.update(1)
 
-                # measure data loading time
-                data_time.update(time() - end)
+                    boards, target_pis, target_vs = batch
+                    boards, target_pis, target_vs = self.prep_features(boards), self.prep_features(target_pis), self.prep_features(target_vs)
 
-                # compute output
-                out_pi, out_v = self.nnet(self.xform_input(boards))
-                l_pi = self.loss_pi(target_pis, out_pi)
-                l_v = self.loss_v(target_vs, out_v)
-                total_loss = l_pi + l_v
-                # record loss
-                pi_losses.update(l_pi.item(), boards.size(0))
-                v_losses.update(l_v.item(), boards.size(0))
+                    # measure data loading time
+                    data_time.update(time() - end)
 
-                # compute gradient and do SGD step
-                self.optimizer.zero_grad()
-                total_loss.backward()
-                self.optimizer.step()
+                    # compute output
+                    out_pi, out_v = self.nnet(self.xform_input(boards))
+                    l_pi = self.loss_pi(target_pis, out_pi)
+                    l_v = self.loss_v(target_vs, out_v)
+                    total_loss = l_pi + l_v
+                    # record loss
+                    pi_losses.update(l_pi.item(), boards.size(0))
+                    v_losses.update(l_v.item(), boards.size(0))
 
-                if summary_writer is not None:
-                    summary_writer.add_scalar("step_loss/policy", pi_losses.avg, global_step=current_step)
-                    summary_writer.add_scalar("step_loss/value", v_losses.avg, global_step=current_step)
-                    summary_writer.add_scalar("step_loss/all", v_losses.avg + pi_losses.avg, global_step=current_step)
-                    summary_writer.flush()
+                    # compute gradient and do SGD step
+                    self.optimizer.zero_grad()
+                    total_loss.backward()
+                    self.optimizer.step()
 
-                # measure elapsed time
-                batch_time.update(time() - end)
-                end = time()
+                    if summary_writer is not None:
+                        summary_writer.add_scalar("step_loss/policy", pi_losses.avg, global_step=current_step)
+                        summary_writer.add_scalar("step_loss/value", v_losses.avg, global_step=current_step)
+                        summary_writer.add_scalar("step_loss/all", v_losses.avg + pi_losses.avg, global_step=current_step)
+                        summary_writer.flush()
 
-                # plot progress
+                    # measure elapsed time
+                    batch_time.update(time() - end)
+                    end = time()
                 t.set_postfix(Loss_pi=pi_losses.avg, Loss_v=v_losses.avg)
 
         self.scheduler.step(pi_losses.avg+v_losses.avg)
