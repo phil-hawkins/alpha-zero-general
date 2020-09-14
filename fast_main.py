@@ -55,7 +55,7 @@ def main(_argv):
         # should preferably be a multiple of process_batch_size and workers
         'gamesPerIteration': FLAGS.process_batch_size * (mp.cpu_count()-1),
         'numItersForTrainExamplesHistory': FLAGS.numItersForTrainExamplesHistory,
-        'symmetricSamples': False,
+        'symmetricSamples': True,
         'numMCTSSims': FLAGS.numMCTSSims,
         'numFastSims': FLAGS.num_fast_MCTS_sims,
         'probFastSim': 0.75,
