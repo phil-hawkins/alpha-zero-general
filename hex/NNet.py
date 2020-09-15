@@ -11,8 +11,8 @@ sys.path.append('../../')
 from utils import dotdict, AverageMeter
 from NeuralNet import NeuralNet
 from .models.scale_cnn import CNNHex, RecurrentCNNHex
-from .models.graph_net import GraphNet, GraphNet_1Trunk, GraphNet_2Bridge, GraphNet_SideNode
-from .board_graph import IdentifierEncoder, ZeroIdentifierEncoder, RandomIdentifierEncoder, batch_to_net, batch_to_1trunk_net
+from .models.graph_net import GraphNet, GraphNet_1Trunk, GraphNet_2Bridge, GraphNet_SideNode, GraphNet_4Trunk
+from .board_graph import IdentifierEncoder, ZeroIdentifierEncoder, RandomIdentifierEncoder, batch_to_net, batch_to_1trunk_net, batch_to_4trunk_net
 
 # args = dotdict({
 #     'dropout': 0.3,
@@ -175,6 +175,10 @@ class NNetWrapper(NeuralNet):
         elif self.net_type == "gat_snodev":
             base_gat_config(RandomIdentifierEncoder(d_model=28))
             self.nnet = GraphNet_SideNode(self.args)
+        elif self.net_type == "gat_4trunk":
+            base_gat_config(IdentifierEncoder(d_model=28, max_seq_len=500))
+            self.xform_input = lambda x: batch_to_4trunk_net(x, self.args, self.device)
+            self.nnet = GraphNet_4Trunk(self.args)
         else:
             raise Exception("Unknown model type {}".format(net_type))
 

@@ -325,6 +325,31 @@ class PlayerGraph(BoardGraph):
         return nd[tn2_ndx]
 
 
+class PlayerSideGraph(PlayerGraph):
+    def __init__(self, node_attr, edge_index, action_map, player, edge_index_2bridge=None):
+        super(PlayerSideGraph, self).__init__(node_attr, edge_index, action_map, player, edge_index_2bridge)
+
+    @classmethod
+    def from_player_graph(cls, player_graph, side):
+        remove_side = (side + 1) % 2
+        player_side_graph = cls(
+            player_graph.node_attr, 
+            player_graph.edge_index, 
+            player_graph.action_map, 
+            player_graph.player, 
+            player_graph.edge_index_2bridge
+        )
+        side_node_ndx = player_side_graph.node_attr[:, remove_side+1].nonzero().squeeze(dim=1)
+        assert len(side_node_ndx) == 1
+        player_side_graph.remove_nodes(side_node_ndx)
+        # recalculate the 2bridge edge_index since a node has been removed
+        player_graph.calc_2bridge_edge_index()
+        # copy the side flag to the attribute for the other side
+        # to makes the attributes consisten for both sides
+        player_side_graph.node_attr[:, remove_side+1] = player_side_graph.node_attr[:, side+1]
+
+        return player_side_graph
+
 def batch_to_net(x, args, device):
     """ converts a batch of boards to input features suitable for the graph net
 
@@ -395,6 +420,81 @@ def batch_to_net(x, args, device):
         batch[i] = torch.cat(batch[i], dim=0)
 
     return edge_index, node_attr, batch
+
+
+def batch_to_4trunk_net(x, args, device):
+    """ converts a batch of boards to input features suitable for the graph net
+
+    input x is one of:
+        - np.array (row, col)
+        - np.array (batch, row, col)
+        - GraphHexBoard object
+        - list of GraphHexBoard objects
+
+    returns:
+        each of the following is a 4 element list with the first 2 items for the current player
+        and the next 2 items for the opposing player:
+
+        - edge_index : coo index for "super-graph" adjacency matrix (2=from/to, edges)
+                this is a union of all graphs in the batch
+        - node_attr : node embedding as column vectors (node, attributes)
+        - batch: (nodes, features (0-2 below))
+                0 : mapping from nodes to input graphs, as per torch geo batch
+                1 : mask for nodes which are valid actions i.e. empty cells
+                2 : map from node index to action index in original input
+
+    """
+    # marshall the input into a batch tensor or a list of graph objects
+    if type(x).__module__ == np.__name__ or isinstance(x, torch.Tensor):
+        if not isinstance(x, torch.Tensor):
+            x = torch.FloatTensor(x.astype(np.float64)).to(device)
+        if len(x.shape) == 2:
+            x = x.unsqueeze(dim=0)
+
+        board_to_graph = BoardGraph.from_matrix_board
+    elif isinstance(x, GraphHexBoard):
+        x = [x]
+        board_to_graph = BoardGraph.from_graph_board
+    elif type(x) == list:
+        board_to_graph = BoardGraph.from_graph_board
+    else:
+        raise Exception("Unsupported batch type for convertion to graph net input")
+
+    # split out the player graphs and build graph net input features from the boards
+    edge_index = [[]] * 8
+    node_attr = [[]] * 4
+    node_ndx_start = [0] * 4
+    batch = [[]] * 4
+    for bi, board in enumerate(x):
+        bg = board_to_graph(board)
+        bg.device = device
+        bg.merge_groups()
+        for i, player in enumerate([-1, 1]):
+            player_graph = PlayerGraph.from_board_graph(bg, player)
+            for side in range(2):
+                si = (2 * i) + side
+                player_side_graph = PlayerSideGraph.from_player_graph(player_graph, side=side)
+                edge_index[si].append(player_side_graph.edge_index + node_ndx_start[si])
+                edge_index[si+4].append(player_side_graph.edge_index_2bridge + node_ndx_start[si])
+                a = player_side_graph.get_node_attr(size=args.num_channels, id_encoder=args.id_encoder)
+                node_attr[si].append(a)
+                node_ndx_start[si] += a.size(0)
+                g = torch.cat((
+                    torch.full((a.size(0), 1), dtype=torch.long, fill_value=bi, device=device),
+                    player_side_graph.action_map
+                ), dim=1)
+                batch[si].append(g)
+
+    for i in range(4):
+        # one-hop edge index
+        edge_index[i] = torch.cat(edge_index[i], dim=1)
+        # 2 bridge edge index
+        edge_index[i+4] = torch.cat(edge_index[i+4], dim=1)
+        node_attr[i] = torch.cat(node_attr[i], dim=0)
+        batch[i] = torch.cat(batch[i], dim=0)
+
+    return edge_index, node_attr, batch
+
 
 
 def batch_to_1trunk_net(x, args, device):

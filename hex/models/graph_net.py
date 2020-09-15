@@ -105,6 +105,7 @@ class Trunk(nn.Module):
         ])
         for i in range(res_blocks):
             self.trunk_mlist.append(GATResBlock(channels=h2_sz, heads=attn_heads))
+        self.out_sz = h2_sz
 
     def forward(self, x, edge_index):
         for layer in self.trunk_mlist:
@@ -245,7 +246,6 @@ class GraphNet_2Bridge(GraphNet):
 
         return p, v
   
-
 
 class PolicyHead_1Trunk(nn.Module):
     def __init__(self, channels, action_size):
@@ -392,5 +392,29 @@ class GraphNet_SideNode(GraphNet):
 
         p = self.p_head(out[0], out[1], batch)
         v = self.v_head(side_nodes)
+
+        return p, v
+
+
+class GraphNet_4Trunk(GraphNet):
+    def forward(self, x):
+        edge_index, node_attr, batch = x
+        out = []
+        for i in range(2):
+            i1 = 2 * i
+            o1 = self.trunk(node_attr[i1], edge_index[i1])
+            o1 = self.align_nodes(o1, batch[ii])
+            i2 = i1 + 1
+            o2 = self.trunk(node_attr[i2], edge_index[i2])
+            o2 = self.align_nodes(o2, batch[i2])
+            out.append(o1+o2)
+
+        batch = self.merge_batches(batch)
+        # the batch indicies should be consistant with both sets of nodes at this point
+        assert batch.size(0) == out[0].size(0)
+        assert batch.size(0) == out[1].size(0)
+
+        p = self.p_head(out[0], out[1], batch)
+        v = self.v_head(out[0], out[1], batch)
 
         return p, v
