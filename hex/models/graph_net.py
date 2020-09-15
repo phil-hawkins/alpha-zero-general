@@ -245,7 +245,7 @@ class GraphNet_2Bridge(GraphNet):
         v = self.v_head(out[0], out[1], batch)
 
         return p, v
-  
+
 
 class PolicyHead_1Trunk(nn.Module):
     def __init__(self, channels, action_size):
@@ -326,7 +326,7 @@ class GraphNet_1Trunk(nn.Module):
         valid_mask = batch[:, -1].bool()
         batch = batch[valid_mask]
         x = x[valid_mask]
-        
+
         p = self.p_head(x, batch)
         v = self.v_head(x, batch)
 
@@ -334,7 +334,7 @@ class GraphNet_1Trunk(nn.Module):
 
 
 class ValueHead_SideNode(nn.Module):
-    ''' This is a readout head for the value function that uses only embedding vectors 
+    ''' This is a readout head for the value function that uses only embedding vectors
     from the nodes containing the artificial player indicator side cells
     '''
     def __init__(self, channels):
@@ -401,12 +401,15 @@ class GraphNet_4Trunk(GraphNet):
         edge_index, node_attr, batch = x
         out = []
         for i in range(2):
+            # side 1
             i1 = 2 * i
             o1 = self.trunk(node_attr[i1], edge_index[i1])
-            o1 = self.align_nodes(o1, batch[ii])
+            o1 = self.align_nodes(o1, batch[i1])
+            # side 2
             i2 = i1 + 1
             o2 = self.trunk(node_attr[i2], edge_index[i2])
             o2 = self.align_nodes(o2, batch[i2])
+            
             out.append(o1+o2)
 
         batch = self.merge_batches(batch)
