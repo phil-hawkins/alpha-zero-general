@@ -410,6 +410,7 @@ class GraphNet_4Trunk(GraphNet):
             o2 = self.trunk(node_attr[i2], edge_index[i2])
             o2 = self.align_nodes(o2, batch[i2])
             
+            o, _ = torch.stack((o1, o2), dim=0).min(dim=0)
             out.append(o1+o2)
 
         batch = self.merge_batches(batch)

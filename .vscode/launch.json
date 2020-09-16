@@ -192,14 +192,14 @@
             ]
         },
         {
-            "name": "Pretrain GraphNet_1Trunk",
+            "name": "Pretrain gat_4trunk",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/pretrain.py",
             "console": "integratedTerminal",
             "redirectOutput": true,
             "args" : [
-                "--nnet", "gat_1trunk",
+                "--nnet", "gat_4trunk",
                 "--example_file", "hex_6x6.pth.tar.examples",
                 "--game_board_size", "6"
             ]
