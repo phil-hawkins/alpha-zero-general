@@ -36,6 +36,7 @@ flags.DEFINE_string('load_folder', './temp/checkpoints', 'load model from folder
 flags.DEFINE_string('load_file', 'best.pth.tar', 'load model from file')
 flags.DEFINE_string('examples_file', None, 'load examples from file')
 flags.DEFINE_integer('start_iteration', 0, 'Iteration to start training at')
+flags.DEFINE_boolean('compare_only', False, 'just do a comparison with the past checkpoint, no training')
 
 
 log = logging.getLogger(__name__)
@@ -68,7 +69,7 @@ def main(_argv):
         'arenaMCTS': False,
         'randomCompareFreq': 1,
         'compareWithPast': True,
-        'pastCompareFreq': 3,
+        'pastCompareFreq': 1,
         'expertValueWeight': dotdict({
             'start': 0,
             'end': 0,
@@ -86,16 +87,23 @@ def main(_argv):
     log.info('Loading %s...', NNet.__name__)
     nnet = NNet(game=g, net_type=FLAGS.nnet, lr=FLAGS.learning_rate, epochs=25, batch_size=FLAGS.train_batch_size)
 
-    if FLAGS.load_model:
-        log.info('Loading checkpoint "%s/%s"...', FLAGS.load_folder, FLAGS.load_file)
-        nnet.load_checkpoint(FLAGS.load_folder, FLAGS.load_file)
-    else:
-        log.warning('Not loading a checkpoint!')
+    # if FLAGS.load_model:
+    #     log.info('Loading checkpoint "%s/%s"...', FLAGS.load_folder, FLAGS.load_file)
+    #     nnet.load_checkpoint(FLAGS.load_folder, FLAGS.load_file)
+    # else:
+    #     log.warning('Not loading a checkpoint!')
 
     log.info('Loading the Coach...')
     c = Coach(g, nnet, args)
-    log.info('Starting the learning process')
-    c.learn()
+
+    if FLAGS.compare_only:    
+        log.info('Comparison only')
+        # the coach sets args.startIter to the number of checkpoints so we need to
+        # look at startIter-1 to get the last checkpoint
+        c.compareToPast(c.args.startIter-1)
+    else:
+        log.info('Starting the learning process')
+        c.learn()
 
 
 if __name__ == '__main__':
