@@ -409,9 +409,9 @@ class GraphNet_4Trunk(GraphNet):
             i2 = i1 + 1
             o2 = self.trunk(node_attr[i2], edge_index[i2])
             o2 = self.align_nodes(o2, batch[i2])
-            
+
             o, _ = torch.stack((o1, o2), dim=0).min(dim=0)
-            out.append(o1+o2)
+            out.append(o)
 
         batch = self.merge_batches(batch)
         # the batch indicies should be consistant with both sets of nodes at this point
