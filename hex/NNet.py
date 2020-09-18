@@ -184,7 +184,7 @@ class NNetWrapper(NeuralNet):
 
         self.nnet.to(device=self.device)
         self.optimizer = optim.Adam(self.nnet.parameters(), lr=self.lr)
-        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, factor=0.2, patience=2)
+        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, factor=0.2, patience=10)
 
     def prep_features(self, t):
         return t.contiguous().to(device=self.device)
@@ -239,7 +239,7 @@ class NNetWrapper(NeuralNet):
                     end = time()
                 t.set_postfix(Loss_pi=pi_losses.avg, Loss_v=v_losses.avg)
 
-        self.scheduler.step(pi_losses.avg+v_losses.avg)
+            self.scheduler.step(pi_losses.avg+v_losses.avg)
 
         return pi_losses.avg, v_losses.avg
 
