@@ -43,7 +43,12 @@ log = logging.getLogger(__name__)
 coloredlogs.install(level='INFO')  # Change this to DEBUG to see more info.
 
 
+def setup_dir(path):
+    if not os.path.isdir(path):
+        os.mkdir(path)
+
 def main(_argv):
+    out_dir = os.path.join('./selfplay', FLAGS.nnet)
     args = dotdict({
         'run_name': os.path.join(FLAGS.nnet, FLAGS.job_id),
         'workers': mp.cpu_count() - 1,
@@ -76,9 +81,13 @@ def main(_argv):
             'iterations': 35
         }),
         'cpuct': 3,
-        'checkpoint': 'checkpoint',
-        'data': 'data',
+        'checkpoint': os.path.join(out_dir, 'checkpoint'),
+        'data': os.path.join(out_dir, 'data')
     })
+    setup_dir('./selfplay')
+    setup_dir(out_dir)
+    setup_dir(args.checkpoint)
+    setup_dir(args.data)
 
     log.info('Config initialised')
     log.info('\tWorkers {}'.format(args.workers))
@@ -87,11 +96,11 @@ def main(_argv):
     log.info('Loading %s...', NNet.__name__)
     nnet = NNet(game=g, net_type=FLAGS.nnet, lr=FLAGS.learning_rate, epochs=25, batch_size=FLAGS.train_batch_size)
 
-    # if FLAGS.load_model:
-    #     log.info('Loading checkpoint "%s/%s"...', FLAGS.load_folder, FLAGS.load_file)
-    #     nnet.load_checkpoint(FLAGS.load_folder, FLAGS.load_file)
-    # else:
-    #     log.warning('Not loading a checkpoint!')
+    if FLAGS.load_model:
+        log.info('Loading pretrained checkpoint "%s/%s"...', FLAGS.load_folder, FLAGS.load_file)
+        nnet.load_checkpoint(FLAGS.load_folder, FLAGS.load_file)
+    else:
+        log.warning('Not loading a pretrained checkpoint!')
 
     log.info('Loading the Coach...')
     c = Coach(g, nnet, args)
