@@ -65,7 +65,8 @@ class Coach:
                         'Note: Comparisons with Random do not use monte carlo tree search.')
                 self.compareToRandom(i)
             if self.args.compareWithPast and (i - 1) % self.args.pastCompareFreq == 0:
-                self.compareToPast(i)
+                #self.compareToPast(i)
+                self.compareToBest(i)
             z = self.args.expertValueWeight
             self.args.expertValueWeight.current = min(
                 i, z.iterations)/z.iterations * (z.end - z.start) + z.start
@@ -297,6 +298,44 @@ class Coach:
         nwins, pwins, draws = arena.playGames(self.args.arenaCompare)
 
         print(f'NEW/PAST WINS : {nwins} / {pwins} ; DRAWS : {draws}\n')
+        self.writer.add_scalar(
+            'win_rate/past', float(nwins + 0.5 * draws) / (pwins + nwins + draws), iteration)
+
+    def compareToBest(self, iteration):
+        self.pnet.load_checkpoint(folder=self.args.checkpoint,
+                                  filename='best.pkl')
+        print(f'PITTING AGAINST BEST PREVIOUS ITERATION')
+        if(self.args.arenaMCTS):
+            pplayer = MCTS(self.game, self.pnet, self.args)
+            nplayer = MCTS(self.game, self.nnet, self.args)
+
+            def playpplayer(x, turn):
+                if turn <= 2:
+                    pplayer.reset()
+                temp = self.args.temp if turn <= self.args.tempThreshold else self.args.arenaTemp
+                policy = pplayer.getActionProb(x, temp=temp)
+                return np.random.choice(len(policy), p=policy)
+
+            def playnplayer(x, turn):
+                if turn <= 2:
+                    nplayer.reset()
+                temp = self.args.temp if turn <= self.args.tempThreshold else self.args.arenaTemp
+                policy = nplayer.getActionProb(x, temp=temp)
+                return np.random.choice(len(policy), p=policy)
+
+            arena = Arena(playnplayer, playpplayer, self.game)
+        else:
+            pplayer = NNPlayer(self.game, self.pnet, self.args.arenaTemp)
+            nplayer = NNPlayer(self.game, self.nnet, self.args.arenaTemp)
+
+            arena = Arena(nplayer.play, pplayer.play, self.game)
+        nwins, pwins, draws = arena.playGames(self.args.arenaCompare)
+
+        print(f'NEW/PAST WINS : {nwins} / {pwins} ; DRAWS : {draws}\n')
+
+        if nwins/(pwins + nwins + draws) > self.args.updateThreshold:
+            print('Saving new best checkpoint!')
+            self.nnet.save_checkpoint(folder=self.args.checkpoint, filename='best.pkl')
         self.writer.add_scalar(
             'win_rate/past', float(nwins + 0.5 * draws) / (pwins + nwins + draws), iteration)
 

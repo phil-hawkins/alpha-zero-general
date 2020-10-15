@@ -82,7 +82,8 @@ def main(_argv):
         }),
         'cpuct': 3,
         'checkpoint': os.path.join(out_dir, 'checkpoint'),
-        'data': os.path.join(out_dir, 'data')
+        'data': os.path.join(out_dir, 'data'),
+        'updateThreshold': FLAGS.updateThreshold
     })
     setup_dir('./selfplay')
     setup_dir(out_dir)
