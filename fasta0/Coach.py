@@ -24,7 +24,8 @@ class Coach:
         self.args = args
 
         networks = sorted(glob(self.args.checkpoint+'/*'))
-        self.args.startIter = len(networks)
+        # need to ignore the best-so-far checkpoint in the count of checkpoints
+        self.args.startIter = len(networks) - 1
         if self.args.startIter == 0:
             self.nnet.save_checkpoint(
                 folder=self.args.checkpoint, filename='iteration-0000.pkl')
