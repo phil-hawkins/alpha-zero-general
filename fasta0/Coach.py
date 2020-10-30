@@ -32,7 +32,7 @@ class Coach:
             self.args.startIter = 1
 
         self.nnet.load_checkpoint(
-            folder=self.args.checkpoint, filename=f'iteration-{(self.args.startIter-1):04d}.pkl')
+            folder=self.args.checkpoint, filename=f'best.pkl')
 
         self.agents = []
         self.input_tensors = []
